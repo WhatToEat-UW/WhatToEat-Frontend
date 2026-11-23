@@ -119,11 +119,15 @@ function RootNavigator() {
   );
 
   let screens: React.ReactNode;
+  let mode: string;
   if (recovering) {
+    mode = 'recovery';
     screens = <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />;
   } else if (session && onboarding === 'needed') {
+    mode = 'setup';
     screens = setupScreens;
   } else if (session || isGuest) {
+    mode = session ? 'app' : 'guest';
     screens = (
       <>
         {appScreens}
@@ -132,12 +136,15 @@ function RootNavigator() {
       </>
     );
   } else {
+    mode = 'signedOut';
     screens = authScreens;
   }
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>{screens}</Stack.Navigator>
+      {/* key: a new auth mode starts fresh on its first screen. Without it, tapping
+          "Continue as guest" stayed on Login, because guests also get the Login screen. */}
+      <Stack.Navigator key={mode} screenOptions={{ headerShown: false }}>{screens}</Stack.Navigator>
     </NavigationContainer>
   );
 }
