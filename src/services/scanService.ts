@@ -1,5 +1,6 @@
 import { BASE_URL, authHeaders, withAuthQuery } from './api';
 import { toLocalYmd } from '../utils/dateLocal';
+import { currentMealType } from './homescreenService';
 
 export type ScanItem = {
   name: string;
@@ -65,7 +66,7 @@ export async function logScanResult(params: {
     headers: authHeaders(true),
     body: JSON.stringify({
       scanId: params.scanId ?? null,
-      mealType: params.mealType ?? 'Snack',
+      mealType: params.mealType ?? currentMealType(),
       date: params.date ?? toLocalYmd(),
       items: params.items,
     }),

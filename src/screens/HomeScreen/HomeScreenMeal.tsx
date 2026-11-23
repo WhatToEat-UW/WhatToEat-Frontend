@@ -10,11 +10,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../../App';
-import { getRecommendedCombos } from '../../services/homescreenService';
+import { getRecommendedCombos, currentMealType } from '../../services/homescreenService';
 import { Combo } from '../../types/homescreen';
+import BackButton from '../SetUp/components/BackButton';
 
 const COLORS = {
   red: '#FF3347',
@@ -26,19 +27,25 @@ const COLORS = {
 
 export default function HomeScreenMeal() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const [combos, setCombos] = React.useState<Combo[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { params } = useRoute<RouteProp<RootStackParamList, 'Meal'>>();
+  const mealType = params?.mealType ?? currentMealType();
+  // Home passes the combo the user tapped; only the Dining Hall AI pick arrives without one.
+  const [combo, setCombo] = React.useState<Combo | undefined>(params?.combo);
+  const [loading, setLoading] = React.useState(!params?.combo);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const load = React.useCallback(() => {
+    setLoading(true);
+    setError(null);
+    getRecommendedCombos(mealType)
+      .then(data => setCombo(data?.combos?.[0]))
+      .catch(err => setError(err instanceof Error ? err.message : String(err)))
+      .finally(() => setLoading(false));
+  }, [mealType]);
 
   React.useEffect(() => {
-    getRecommendedCombos('breakfast')
-      .then(data => {
-        if (data?.combos) setCombos(data.combos);
-      })
-      .catch(err => console.error('Failed to fetch combos:', err))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const combo = combos[0];
+    if (!params?.combo) load();
+  }, [params?.combo, load]);
 
   const totalKcal = combo?.totalCalories ?? 0;
   const totalProtein = combo?.totalProtein ?? 0;
@@ -50,8 +57,9 @@ export default function HomeScreenMeal() {
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="dark-content" />
         <View style={styles.container}>
+          <BackButton onPress={() => navigation.goBack()} />
 
-          {/* ── Total row ── */}
+          {/*── Total row ── */}
           <View style={styles.totalRow}>
             <View>
               <Text style={styles.totalLabel}>Total</Text>
@@ -87,6 +95,15 @@ export default function HomeScreenMeal() {
 
             {loading ? (
               <ActivityIndicator size="large" color={COLORS.red} style={{ marginTop: 40 }} />
+            ) : error || !combo ? (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyText}>
+                  {error ? `Couldn't load this meal. ${error}` : `No ${mealType} pick available right now.`}
+                </Text>
+                <TouchableOpacity style={styles.retryBtn} onPress={load}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               <View style={styles.foodList}>
                 {(combo?.items ?? []).map((item, i) => (
@@ -102,9 +119,9 @@ export default function HomeScreenMeal() {
             <View style={styles.logBtnWrap}>
               <TouchableOpacity
                 style={styles.logBtn}
-                onPress={() => navigation.navigate('Confirm', { combo } as any)}
+                onPress={() => combo && navigation.navigate('Confirm', { combo, mealType })}
                 activeOpacity={0.85}
-                disabled={!combo}
+                disabled={!combo || loading}
               >
                 <Svg width={20} height={20} viewBox="0 0 24 24">
                   <Path d="M12 5v14M5 12h14" stroke="white" strokeWidth={2.5} strokeLinecap="round" fill="none" />
@@ -157,4 +174,8 @@ const styles = StyleSheet.create({
     shadowColor: COLORS.border, shadowOffset: { width: 6, height: 6 }, shadowOpacity: 1, shadowRadius: 0, elevation: 6,
   },
   logBtnText: { fontSize: 16, fontWeight: '900', color: 'white', letterSpacing: -0.1 },
+  emptyBox: { alignItems: 'center', paddingHorizontal: 30, paddingTop: 30, gap: 12 },
+  emptyText: { fontSize: 13, fontWeight: '600', color: COLORS.inkMuted, textAlign: 'center' },
+  retryBtn: { backgroundColor: COLORS.red, borderWidth: 2, borderColor: COLORS.border, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 8 },
+  retryText: { fontSize: 13, fontWeight: '900', color: 'white' },
 });

@@ -14,6 +14,7 @@ import ScanResultCard from './components/ScanResultCard';
 import ScanErrorCard from './components/ScanErrorCard';
 import ScanControls from './components/ScanControls';
 import { logScanResult, uploadFoodScan, type ScanItem } from '../../services/scanService';
+import { currentMealType } from '../../services/homescreenService';
 
 type ScanState = 'idle' | 'analyzing' | 'result' | 'error';
 
@@ -107,7 +108,7 @@ export default function ScanScreen() {
     try {
       await logScanResult({
         scanId: scanId ?? undefined,
-        mealType: 'Snack',
+        mealType: currentMealType(),
         items: scanItems.map((i) => ({
           name: i.name,
           calories: i.calories,

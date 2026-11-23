@@ -7,6 +7,20 @@ function todayLocal(): string {
   return toLocalYmd(new Date());
 }
 
+export type MealPeriod = 'breakfast' | 'lunch' | 'dinner';
+
+/**
+ * Meal period from the device's local clock. Used for recommendations and every meal log
+ * (menu + scan) so one meal ends up in one meal_log — the API stores mealType verbatim,
+ * so 'breakfast' vs 'Snack' vs 'Breakfast' used to split into separate logs.
+ */
+export function currentMealType(d: Date = new Date()): MealPeriod {
+  const h = d.getHours();
+  if (h < 10) return 'breakfast';
+  if (h < 15) return 'lunch';
+  return 'dinner';
+}
+
 async function parseJson<T>(res: Response, label: string): Promise<T> {
   const text = await res.text();
   if (!res.ok) {

@@ -8,12 +8,13 @@ import {
   StatusBar,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../../App';
 import { logMeal } from '../../services/homescreenService';
-import { Combo } from '../../types/homescreen';
+import BackButton from '../SetUp/components/BackButton';
 
 const COLORS = {
   red: '#FF3347',
@@ -38,15 +39,18 @@ const PlateIllustration = () => (
 
 export default function HomeScreenConfirm() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const route = useRoute();
-  const combo = (route.params as any)?.combo as Combo | undefined;
+  const { params } = useRoute<RouteProp<RootStackParamList, 'Confirm'>>();
+  const { combo, mealType } = params;
   const [logging, setLogging] = React.useState(false);
+  // State updates are async — a fast double tap could pass `disabled` and log the meal twice.
+  const inFlight = React.useRef(false);
 
   const handleConfirm = async () => {
-    if (!combo) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setLogging(true);
     try {
-      await logMeal('breakfast', combo.items.map(item => ({
+      await logMeal(mealType, combo.items.map(item => ({
         foodId: item.id,
         foodName: item.name,
         quantity: 1,
@@ -56,17 +60,19 @@ export default function HomeScreenConfirm() {
         fat: item.fat,
         source: 'menu',
       })));
-      navigation.navigate('Add');
+      // replace, not navigate: Back from Add must not land here and allow logging it again.
+      navigation.replace('Add', { mealType });
     } catch (err) {
-      console.error('Failed to log meal:', err);
-    } finally {
+      inFlight.current = false;
       setLogging(false);
+      Alert.alert('Could not log meal', err instanceof Error ? err.message : String(err));
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
+      <BackButton onPress={() => navigation.goBack()} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -75,7 +81,7 @@ export default function HomeScreenConfirm() {
         {/* ── Hero card ── */}
         <View style={styles.heroCard}>
           <View style={styles.heroTop}>
-            <Text style={styles.heroTag}>⭐ Best pick · {combo?.label ?? 'Recommended'}</Text>
+            <Text style={styles.heroTag}>⭐ Best pick · {combo.label ?? 'Recommended'}</Text>
             <View style={styles.loggedBadge}>
               <Text style={styles.loggedBadgeText}>{combo?.diningHall ?? 'Dining Hall'}</Text>
             </View>

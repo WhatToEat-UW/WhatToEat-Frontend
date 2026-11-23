@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useCallback } from 'react';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../../App';
 import {
@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { getRecommendedCombos } from '../../services/homescreenService';
+import { getRecommendedCombos, currentMealType, MealPeriod } from '../../services/homescreenService';
 import { Combo } from '../../types/homescreen';
 
 const COLORS = {
@@ -61,7 +61,7 @@ const DateStrip = () => {
   );
 };
 
-const HallCard = ({ combo, navigation }: { combo: Combo; navigation: StackNavigationProp<RootStackParamList> }) => {
+const HallCard = ({ combo, mealType, navigation }: { combo: Combo; mealType: MealPeriod; navigation: StackNavigationProp<RootStackParamList> }) => {
   const [expanded, setExpanded] = useState(false);
   const animation = useState(new Animated.Value(0))[0];
 
@@ -118,7 +118,7 @@ const HallCard = ({ combo, navigation }: { combo: Combo; navigation: StackNaviga
                 </View>
               ))}
             </View>
-            <TouchableOpacity style={styles.logBtn} onPress={() => navigation.navigate('Meal')} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.logBtn} onPress={() => navigation.navigate('Meal', { combo, mealType })} activeOpacity={0.85}>
               <Svg width={16} height={16} viewBox="0 0 24 24">
                 <Path d="M12 5v14M5 12h14" stroke="white" strokeWidth={2.5} strokeLinecap="round" fill="none" />
               </Svg>
@@ -138,13 +138,21 @@ export default function HomeScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [combos, setCombos] = useState<Combo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mealType, setMealType] = useState<MealPeriod>(currentMealType());
 
-  useEffect(() => {
-    getRecommendedCombos()
-      .then(data => { if (data?.combos) setCombos(data.combos); })
-      .catch(err => console.error('Failed to fetch combos:', err))
+  // Reload on every focus: after logging a meal (or when the meal period changes) the
+  // picks are refreshed instead of showing what was fetched at first mount.
+  const load = useCallback(() => {
+    const mt = currentMealType();
+    setMealType(mt);
+    setError(null);
+    getRecommendedCombos(mt)
+      .then(data => setCombos(data?.combos ?? []))
+      .catch(err => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
   }, []);
+  useFocusEffect(load);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -157,10 +165,21 @@ export default function HomeScreen() {
         </View>
         {loading ? (
           <ActivityIndicator size="large" color={COLORS.red} style={{ marginTop: 40 }} />
+        ) : error ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>Couldn't load picks. {error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => { setLoading(true); load(); }}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : combos.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>No {mealType} picks yet — menus may not be posted.</Text>
+          </View>
         ) : (
           <ScrollView style={styles.scrollBody} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
             {combos.map((combo, i) => (
-              <HallCard key={i} combo={combo} navigation={navigation} />
+              <HallCard key={combo.id ?? i} combo={combo} mealType={mealType} navigation={navigation} />
             ))}
           </ScrollView>
         )}
@@ -209,4 +228,8 @@ const styles = StyleSheet.create({
   logBtnText: { fontSize: 15, fontWeight: '900', color: 'white' },
   logBtnKcalWrap: { backgroundColor: 'rgba(255,255,255,0.22)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 3 },
   logBtnKcal: { fontSize: 11, fontWeight: '700', color: 'white' },
+  emptyBox: { alignItems: 'center', paddingHorizontal: 30, paddingTop: 40, gap: 12 },
+  emptyText: { fontSize: 13, fontWeight: '600', color: COLORS.inkMuted, textAlign: 'center' },
+  retryBtn: { backgroundColor: COLORS.red, borderWidth: 2, borderColor: COLORS.border, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 8 },
+  retryText: { fontSize: 13, fontWeight: '900', color: 'white' },
 });

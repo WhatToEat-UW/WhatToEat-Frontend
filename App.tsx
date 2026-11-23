@@ -29,6 +29,8 @@ import HomeScreenAdd from './src/screens/HomeScreen/HomeScreenAdd';
 import ScanScreen from './src/screens/Scan/ScanScreen';
 import SignupVerifyScreen from './src/screens/Auth/SignupVerifyScreen';
 import EditProfileScreen from './src/screens/Profile/EditProfileScreen';
+import type { Combo } from './src/types/homescreen';
+import type { MealPeriod } from './src/services/homescreenService';
 
 export type RootStackParamList = {
   ForgotPassword: undefined;
@@ -47,9 +49,10 @@ export type RootStackParamList = {
   Weight: undefined;
   Welcome: undefined;
   Home: undefined;
-  Meal: undefined;
-  Confirm: undefined;
-  Add: undefined;
+  // combo omitted (Dining Hall AI pick) → Meal fetches the top pick for mealType itself
+  Meal: { combo?: Combo; mealType?: MealPeriod } | undefined;
+  Confirm: { combo: Combo; mealType: MealPeriod };
+  Add: { mealType: MealPeriod };
   Scan: undefined;
   SignupVerify: { email: string };
   EditProfile: undefined;

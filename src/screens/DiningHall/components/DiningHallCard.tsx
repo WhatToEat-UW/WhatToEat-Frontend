@@ -98,7 +98,7 @@ import {
             <ComboButton
                 label={day.aiPickLabel}
                 title={day.aiPickName}
-                onPress={() => navigation.navigate('Meal')}
+                onPress={() => navigation.navigate('Meal', { mealType: activeMeal })}
             />
             )}
 

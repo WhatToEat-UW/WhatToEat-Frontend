@@ -8,9 +8,10 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../../App';
 import { getAddons, logMeal } from '../../services/homescreenService';
@@ -27,21 +28,31 @@ export default function HomeScreenAdd() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [suggestions, setSuggestions] = React.useState<AddonItem[]>([]);
   const [quickAddons, setQuickAddons] = React.useState<AddonItem[]>([]);
+  const { mealType } = useRoute<RouteProp<RootStackParamList, 'Add'>>().params;
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  // food ids already logged (or in flight) on this screen — a second tap used to log it again
+  const [added, setAdded] = React.useState<Set<number>>(new Set());
+  const pending = React.useRef(new Set<number>());
 
-  React.useEffect(() => {
-    getAddons('breakfast')
+  const load = React.useCallback(() => {
+    setLoading(true);
+    setError(null);
+    getAddons(mealType)
       .then(data => {
-        if (data?.suggestions) setSuggestions(data.suggestions);
-        if (data?.quickAddons) setQuickAddons(data.quickAddons);
+        setSuggestions(data?.suggestions ?? []);
+        setQuickAddons(data?.quickAddons ?? []);
       })
-      .catch(err => console.error('Failed to fetch addons:', err))
+      .catch(err => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [mealType]);
+  React.useEffect(load, [load]);
 
   const handleAddItem = async (item: AddonItem) => {
+    if (added.has(item.id) || pending.current.has(item.id)) return;
+    pending.current.add(item.id);
     try {
-      await logMeal('breakfast', [{
+      await logMeal(mealType, [{
         foodId: item.id,
         foodName: item.name,
         quantity: 1,
@@ -51,8 +62,11 @@ export default function HomeScreenAdd() {
         fat: item.fat,
         source: 'menu',
       }]);
+      setAdded(prev => new Set(prev).add(item.id));
     } catch (err) {
-      console.error('Failed to log addon:', err);
+      Alert.alert(`Could not add ${item.name}`, err instanceof Error ? err.message : String(err));
+    } finally {
+      pending.current.delete(item.id);
     }
   };
 
@@ -64,8 +78,8 @@ export default function HomeScreenAdd() {
         {/* Header */}
         <View style={styles.pageHeader}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.pageTitle}>Eat anything{'\n'}else at breakfast?</Text>
-            <Text style={styles.pageSub}>We'll add it to this morning's totals ☀️</Text>
+            <Text style={styles.pageTitle}>Eat anything{'\n'}else at {mealType}?</Text>
+            <Text style={styles.pageSub}>Tap to add it to your {mealType} totals</Text>
           </View>
           <TouchableOpacity
             style={styles.closeBtn}
@@ -86,6 +100,13 @@ export default function HomeScreenAdd() {
 
         {loading ? (
           <ActivityIndicator size="large" color={COLORS.inkMuted} style={{ marginTop: 40 }} />
+        ) : error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.optionKcal}>Couldn't load add-ons. {error}</Text>
+            <TouchableOpacity style={styles.snackChip} onPress={load}>
+              <Text style={styles.snackChipName}>Retry</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <ScrollView
             style={styles.scrollBody}
@@ -97,11 +118,12 @@ export default function HomeScreenAdd() {
               {suggestions.map((item, i) => (
                 <TouchableOpacity
                   key={i}
-                  style={styles.optionCard}
+                  style={[styles.optionCard, added.has(item.id) && styles.addedCard]}
                   activeOpacity={0.85}
                   onPress={() => handleAddItem(item)}
+                  disabled={added.has(item.id)}
                 >
-                  <Text style={styles.optionEmoji}>🍽️</Text>
+                  <Text style={styles.optionEmoji}>{added.has(item.id) ? '✅' : '🍽️'}</Text>
                   <Text style={styles.optionName}>{item.name}</Text>
                   {item.calories != null && (
                     <Text style={styles.optionKcal}>{item.calories} kcal</Text>
@@ -120,11 +142,12 @@ export default function HomeScreenAdd() {
               {quickAddons.map((item, i) => (
                 <TouchableOpacity
                   key={i}
-                  style={styles.snackChip}
+                  style={[styles.snackChip, added.has(item.id) && styles.addedCard]}
                   activeOpacity={0.85}
                   onPress={() => handleAddItem(item)}
+                  disabled={added.has(item.id)}
                 >
-                  <Text style={styles.snackEmoji}>➕</Text>
+                  <Text style={styles.snackEmoji}>{added.has(item.id) ? '✅' : '➕'}</Text>
                   <Text style={styles.snackChipName}>{item.name}</Text>
                 </TouchableOpacity>
               ))}
@@ -177,5 +200,7 @@ const styles = StyleSheet.create({
     shadowColor: COLORS.border, shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 0, elevation: 3,
   },
   snackEmoji: { fontSize: 16 },
+  addedCard: { opacity: 0.55 },
+  errorBox: { alignItems: 'center', paddingHorizontal: 30, paddingTop: 30, gap: 12 },
   snackChipName: { fontSize: 12, fontWeight: '800', color: COLORS.ink, lineHeight: 16 },
 });
