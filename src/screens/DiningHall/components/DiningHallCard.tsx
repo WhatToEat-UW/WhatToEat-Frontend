@@ -16,6 +16,7 @@ import {
     import { ComboButton } from './ComboButton';
     import { MealPane } from './MealPane';
     import { styles } from '../styles/DiningHallCard.styles';
+    import { currentMealType } from '../../../services/homescreenService';
 
     interface Props {
     hall: DiningHall;
@@ -32,7 +33,7 @@ import {
 
     export const DiningHallCard = ({ hall, day }: Props) => {
     const [expanded, setExpanded] = useState(false);
-    const [activeMeal, setActiveMeal] = useState<MealType>('breakfast');
+    const [activeMeal, setActiveMeal] = useState<MealType>(currentMealType);
     const rotateAnim = useRef(new Animated.Value(0)).current;
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
@@ -66,7 +67,12 @@ import {
                 <Text style={styles.hallHours}>{day.hours}</Text>
             </View>
             <TouchableOpacity
-                onPress={() => Linking.openURL(hall.mapsUrl)}
+                // API mapsUrl values are placeholder short links that don't resolve; search by name instead.
+                onPress={() =>
+                    Linking.openURL(
+                        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${hall.name} UW Madison`)}`,
+                    ).catch(() => {})
+                }
                 activeOpacity={0.7}
                 style={styles.locationBtn}
             >

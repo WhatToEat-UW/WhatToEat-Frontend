@@ -45,7 +45,7 @@ const ALLERGENS = [
 export default function AllergensScreen({ navigation }: AllergensScreenProps) {
   const setDraft = useOnboardingDraft((s) => s.setDraft);
   const { edit, next, saving } = useSetupStep('DiningHall');
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(useOnboardingDraft.getState().allergens));
 
   const toggle = (id: string) => {
     setSelected(prev => {

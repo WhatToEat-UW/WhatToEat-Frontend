@@ -3,6 +3,9 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { styles } from '../styles/ScanResultCard.styles';
 
 type Props = {
+  /** detected foods; ✕ drops a wrong guess before saving (totals are recomputed by the parent) */
+  items: { name: string; calories: number }[];
+  onRemoveItem: (index: number) => void;
   kcal: number;
   protein: number;
   carbs: number;
@@ -15,6 +18,8 @@ type Props = {
 
 // Shows the nutrition result card after a successful scan
 export default function ScanResultCard({
+  items,
+  onRemoveItem,
   kcal,
   protein,
   carbs,
@@ -40,8 +45,17 @@ export default function ScanResultCard({
           <Text style={styles.macroLabel}>Fat</Text>
         </View>
       </View>
+      {items.map((it, i) => (
+        <View key={`${it.name}-${i}`} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+          <Text style={{ color: 'white', flex: 1, fontWeight: '700' }} numberOfLines={1}>{it.name}</Text>
+          <Text style={{ color: 'white', opacity: 0.85, marginRight: 10 }}>{Math.round(it.calories)} kcal</Text>
+          <TouchableOpacity onPress={() => onRemoveItem(i)} hitSlop={8} accessibilityLabel={`Remove ${it.name}`}>
+            <Text style={{ color: 'white', fontWeight: '900' }}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
       <Text style={styles.resultNote}>Nutrition information is an estimate</Text>
-      {onLogMeal ? (
+      {onLogMeal && items.length > 0 ? (
         <TouchableOpacity
           style={{ marginTop: 12, paddingVertical: 10, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 }}
           onPress={onLogMeal}

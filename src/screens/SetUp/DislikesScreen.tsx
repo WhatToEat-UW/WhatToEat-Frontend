@@ -43,7 +43,7 @@ const CATEGORIES: Category[] = [
 export default function DislikesScreen({ navigation }: DislikesScreenProps) {
   const setDraft = useOnboardingDraft((s) => s.setDraft);
   const { edit, next, saving } = useSetupStep('Allergens');
-  const [selected, setSelected]   = useState<Set<string>>(new Set());
+  const [selected, setSelected]   = useState<Set<string>>(() => new Set(useOnboardingDraft.getState().dislikes));
   const [noDislikes, setNoDislikes] = useState(false);
 
   const toggleItem = (item: string) => {

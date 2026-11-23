@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,7 +22,7 @@ function dateKey(offsetDays: number): string {
   return toLocalYmd(d);
 }
 
-function buildDateTabs(): DateTab[] {
+function buildDateTabs(_today: string): DateTab[] {
   return Array.from({ length: 10 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
@@ -35,58 +35,48 @@ function buildDateTabs(): DateTab[] {
   });
 }
 
-const DATE_TABS = buildDateTabs();
-
-function resolveDayKey(date: string, availableKeys: string[]): string {
-  if (availableKeys.length === 0) return date;
-  if (availableKeys.includes(date)) return date;
-  const idx = DATE_TABS.findIndex(t => t.key === date);
-  if (idx < 0) return availableKeys[0];
-  return availableKeys[idx % availableKeys.length] ?? availableKeys[0];
-}
-
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function DiningHallsScreen() {
   const insets = useSafeAreaInsets();
   const [sortBy, setSortBy] = useState<SortOption>('Relevance');
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(DATE_TABS[0].key);
+  // Tabs used to be built once at app start, so they were a day off after midnight.
+  const today = toLocalYmd();
+  const dateTabs = useMemo(() => buildDateTabs(today), [today]);
+  const [pickedDate, setSelectedDate] = useState(today);
+  const selectedDate = pickedDate < today ? today : pickedDate;
 
-  // ← Fetch from backend
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['diningHalls', selectedDate],
     queryFn: () => fetchDiningHalls(selectedDate),
   });
 
-  const halls: DiningHall[] = data?.diningHalls ?? [];
-  
-  const sortedHalls = [...halls].sort((a, b) => {
-    const keyA = resolveDayKey(selectedDate, Object.keys(a.days));
-    const keyB = resolveDayKey(selectedDate, Object.keys(b.days));
-    const dayA = a.days[keyA];
-    const dayB = b.days[keyB];
-    if (!dayA || !dayB) return 0;
-    if (sortBy === 'Open Now') {
-      const rank = (s: string) => (s === 'open' ? 0 : s === 'soon' ? 1 : 2);
-      return rank(dayA.status) - rank(dayB.status);
-    }
-    if (sortBy === 'Closest') {
-      return Math.random() - 0.5;
-    }
-    return 0;
-  });
+  // Only the selected day's data. A missing day used to borrow another day's menu.
+  const halls = (data?.diningHalls ?? []).filter((h: DiningHall) => h.days[selectedDate]);
+
+  const sortedHalls =
+    sortBy === 'Open Now'
+      ? [...halls].sort((a, b) => {
+          const rank = (s: string) => (s === 'open' ? 0 : s === 'soon' ? 1 : 2);
+          return rank(a.days[selectedDate].status) - rank(b.days[selectedDate].status);
+        })
+      : halls;
+
+  const updated = dataUpdatedAt
+    ? ` · Updated ${new Date(dataUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+    : '';
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.screenHeader}>
         <Text style={styles.screenTitle}>Dining Halls</Text>
-        <Text style={styles.screenSubtitle}>6 locations on campus · Updated just now</Text>
+        <Text style={styles.screenSubtitle}>{halls.length} locations on campus{updated}</Text>
       </View>
 
       {/* Date picker */}
       <DateTabBar
-        tabs={DATE_TABS}
+        tabs={dateTabs}
         selectedDate={selectedDate}
         onSelect={setSelectedDate}
       />
@@ -119,8 +109,15 @@ export default function DiningHallsScreen() {
         <ActivityIndicator style={{ marginTop: 40 }} size="large" color={C.inkMuted} />
       )}
       {isError && (
-        <Text style={{ textAlign: 'center', marginTop: 40, color: 'red' }}>
-          Failed to load dining halls. Please try again.
+        <TouchableOpacity onPress={() => refetch()}>
+          <Text style={{ textAlign: 'center', marginTop: 40, color: 'red' }}>
+            Failed to load dining halls. Tap to retry.
+          </Text>
+        </TouchableOpacity>
+      )}
+      {!isLoading && !isError && halls.length === 0 && (
+        <Text style={{ textAlign: 'center', marginTop: 40, color: C.inkMuted }}>
+          No menus posted for this day yet.
         </Text>
       )}
 
@@ -130,12 +127,9 @@ export default function DiningHallsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {sortedHalls.map(hall => {
-          const resolvedKey = resolveDayKey(selectedDate, Object.keys(hall.days));
-          const day = hall.days[resolvedKey];
-          if (!day) return null;
-          return <DiningHallCard key={hall.id} hall={hall} day={day} />;
-        })}
+        {sortedHalls.map(hall => (
+          <DiningHallCard key={hall.id} hall={hall} day={hall.days[selectedDate]} />
+        ))}
       </ScrollView>
     </View>
   );

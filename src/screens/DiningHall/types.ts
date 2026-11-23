@@ -1,5 +1,6 @@
 export type StatusType = 'open' | 'soon' | 'closed';
-export type SortOption = 'Relevance' | 'Open Now' | 'Closest';
+// ponytail: 'Closest' removed — it was Math.random(); add back with expo-location + hall coords
+export type SortOption = 'Relevance' | 'Open Now';
 export type MealType = 'breakfast' | 'lunch' | 'dinner';
 
 export interface MenuItem {

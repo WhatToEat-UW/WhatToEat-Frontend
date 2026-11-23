@@ -5,11 +5,11 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
-  Switch,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useNavigation, useFocusEffect, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -20,6 +20,7 @@ import {
   type PreferencesResponse,
 } from '../../services/questionnaireService';
 import { useAuth } from '../../context/AuthContext';
+import { sendPasswordResetEmail } from '../../lib/authLinking';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COLORS = {
@@ -106,29 +107,35 @@ const StatCard = ({ value, label, bg, accent }: { value: string; label: string; 
 const SectionRow = ({
   label,
   value,
+  onPress,
 }: {
   label: string;
   value?: string;
+  onPress?: () => void;
 }) => (
-  <View style={styles.sectionRow}>
+  <TouchableOpacity style={styles.sectionRow} onPress={onPress} disabled={!onPress} activeOpacity={0.7}>
     <Text style={styles.sectionRowLabel}>{label}</Text>
     {value ? <Text style={styles.sectionRowValue}>{value}</Text> : null}
-  </View>
+  </TouchableOpacity>
 );
 
-// ─── Toggle Row ───────────────────────────────────────────────────────────────
-const ToggleRow = ({ label, value, onToggle }: { label: string; value: boolean; onToggle: () => void }) => (
-  <View style={styles.sectionRow}>
-    <Text style={styles.sectionRowLabel}>{label}</Text>
-    <Switch
-      value={value}
-      onValueChange={onToggle}
-      trackColor={{ false: '#F0E0E0', true: COLORS.red }}
-      thumbColor="white"
-      ios_backgroundColor="#F0E0E0"
-    />
-  </View>
-);
+/** "Change Password": email a reset link; the link opens the ResetPassword screen. */
+export function confirmPasswordReset(email: string | null | undefined) {
+  if (!email) {
+    Alert.alert('No email on this account');
+    return;
+  }
+  Alert.alert('Change password', `We'll email a reset link to ${email}.`, [
+    { text: 'Cancel', style: 'cancel' },
+    {
+      text: 'Send',
+      onPress: () =>
+        sendPasswordResetEmail(email)
+          .then(() => Alert.alert('Check your email', 'Open the link on this phone to set a new password.'))
+          .catch((e: unknown) => Alert.alert('Could not send email', e instanceof Error ? e.message : String(e))),
+    },
+  ]);
+}
 
 // ─── Section Block ────────────────────────────────────────────────────────────
 const SectionBlock = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -147,10 +154,8 @@ const TagPill = ({ label, color }: { label: string; color: string }) => (
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
-  const [notifications, setNotifications] = useState(true);
-  const [weeklyReport, setWeeklyReport] = useState(false);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const { signOut } = useAuth();
+  const { signOut, session } = useAuth();
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState<ProfileMeResponse | null>(null);
   const [prefs, setPrefs] = useState<PreferencesResponse | null>(null);
@@ -242,7 +247,7 @@ export default function ProfileScreen() {
         : '—';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="dark-content" />
       <ScrollView
         style={styles.scroll}
@@ -359,20 +364,10 @@ export default function ProfileScreen() {
           />
         </SectionBlock>
 
-        {/* ── Notifications ── */}
-        <SectionBlock title="Notifications">
-          <ToggleRow label="Meal reminders" value={notifications} onToggle={() => setNotifications(!notifications)} />
-          <View style={styles.divider} />
-          <ToggleRow label="Weekly report" value={weeklyReport} onToggle={() => setWeeklyReport(!weeklyReport)} />
-        </SectionBlock>
-
-        {/* ── Account ── */}
+        {/* Notifications toggles and Privacy/Terms rows were removed: nothing behind them yet
+            (no push setup, no policy pages). Add back when those exist. */}
         <SectionBlock title="Account">
-          <SectionRow label="Change Password" />
-          <View style={styles.divider} />
-          <SectionRow label="Privacy Policy" />
-          <View style={styles.divider} />
-          <SectionRow label="Terms of Service" />
+          <SectionRow label="Change Password" onPress={() => confirmPasswordReset(session?.user.email)} />
         </SectionBlock>
 
         {/* ── Logout ── */}

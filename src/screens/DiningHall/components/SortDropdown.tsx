@@ -4,7 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 import { SortOption } from '../types';
 import { styles } from '../styles/SortDropdown.styles';
 
-const SORT_OPTIONS: SortOption[] = ['Relevance', 'Open Now', 'Closest'];
+const SORT_OPTIONS: SortOption[] = ['Relevance', 'Open Now'];
 
 const CheckIcon = () => (
     <Svg width={10} height={10} viewBox="0 0 10 10" fill="none">

@@ -5,7 +5,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { styles } from './styles/ScanScreen.styles';
@@ -18,22 +20,26 @@ import { currentMealType } from '../../services/homescreenService';
 
 type ScanState = 'idle' | 'analyzing' | 'result' | 'error';
 
-type NutritionResult = {
-  kcal: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-};
+const openSettingsAlert = (what: string) =>
+  Alert.alert(`${what} access is off`, `Turn on ${what.toLowerCase()} access for WhatToEat in Settings.`, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+  ]);
 
 export default function ScanScreen() {
   const cameraRef = useRef<CameraView | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
+  // Tabs stay mounted; without this the camera kept running on other tabs.
+  const isFocused = useIsFocused();
   const [scanState, setScanState] = useState<ScanState>('idle');
-  const [result, setResult] = useState<NutritionResult | null>(null);
   const [facing, setFacing] = useState<CameraType>('back');
   const [scanId, setScanId] = useState<string | null>(null);
   const [scanItems, setScanItems] = useState<ScanItem[]>([]);
   const [logBusy, setLogBusy] = useState(false);
+
+  // Totals follow the item list so removing a wrong item updates them.
+  const sum = (k: 'calories' | 'protein' | 'carbs' | 'fat') =>
+    Math.round(scanItems.reduce((t, i) => t + (i[k] ?? 0), 0));
 
   const handleFlip = () => {
     setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
@@ -45,12 +51,6 @@ export default function ScanScreen() {
       const data = await uploadFoodScan(uri);
       setScanId(data.scanId);
       setScanItems(data.items ?? []);
-      setResult({
-        kcal: Math.round(data.summary.kcal),
-        protein: Math.round(data.summary.protein),
-        carbs: Math.round(data.summary.carbs),
-        fat: Math.round(data.summary.fat),
-      });
       setScanState('result');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -80,10 +80,13 @@ export default function ScanScreen() {
 
   const handleUpload = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return;
+    if (status !== 'granted') {
+      openSettingsAlert('Photo'); // used to return silently
+      return;
+    }
 
     const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'], // MediaTypeOptions is deprecated
       quality: 0.8,
     });
 
@@ -94,7 +97,6 @@ export default function ScanScreen() {
 
   const handleReset = () => {
     setScanState('idle');
-    setResult(null);
     setScanId(null);
     setScanItems([]);
   };
@@ -140,15 +142,20 @@ export default function ScanScreen() {
           </Text>
           <TouchableOpacity
             style={styles.permissionBtn}
-            onPress={requestPermission}
+            // After "Don't ask again" requestPermission does nothing; send the user to Settings.
+            onPress={permission.canAskAgain ? requestPermission : () => void Linking.openSettings()}
             activeOpacity={0.85}
           >
-            <Text style={styles.permissionBtnText}>Grant Permission</Text>
+            <Text style={styles.permissionBtnText}>
+              {permission.canAskAgain ? 'Grant Permission' : 'Open Settings'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
+
+  if (!isFocused) return <View style={styles.container} />;
 
   return (
     <View style={styles.container}>
@@ -166,12 +173,14 @@ export default function ScanScreen() {
           </View>
         )}
 
-        {scanState === 'result' && result && (
+        {scanState === 'result' && (
           <ScanResultCard
-            kcal={result.kcal}
-            protein={result.protein}
-            carbs={result.carbs}
-            fat={result.fat}
+            items={scanItems}
+            onRemoveItem={(i) => setScanItems((prev) => prev.filter((_, j) => j !== i))}
+            kcal={sum('calories')}
+            protein={sum('protein')}
+            carbs={sum('carbs')}
+            fat={sum('fat')}
             onDismiss={handleReset}
             onLogMeal={handleLogMeal}
             logBusy={logBusy}

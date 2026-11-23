@@ -39,7 +39,7 @@ const HALLS = [
 
 export default function DiningHallScreen({ navigation }: DiningHallScreenProps) {
   const { next, saving } = useSetupStep('PrivacyPolicy');
-  const [order, setOrder] = useState<string[]>([]);
+  const [order, setOrder] = useState<string[]>(() => useOnboardingDraft.getState().favoriteDiningHalls);
 
   const toggle = (id: string) => {
     setOrder(prev => {

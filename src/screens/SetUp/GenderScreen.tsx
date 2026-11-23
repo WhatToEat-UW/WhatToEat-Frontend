@@ -39,7 +39,7 @@ const GENDERS = [
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function GenderScreen({ navigation }: GenderScreenProps) {
   const { next, saving } = useSetupStep('Height');
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(() => useOnboardingDraft.getState().gender);
 
   return (
     <SafeAreaView style={styles.safeArea}>

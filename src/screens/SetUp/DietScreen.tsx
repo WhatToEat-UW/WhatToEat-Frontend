@@ -159,7 +159,7 @@ function DietDetailModal({
 export default function DietScreen({ navigation }: DietScreenProps) {
   const setDraft = useOnboardingDraft((s) => s.setDraft);
   const { edit, next, saving } = useSetupStep('Dislikes');
-  const [selected, setSelected]     = useState<string | null>(null);
+  const [selected, setSelected]     = useState<string | null>(() => useOnboardingDraft.getState().dietType);
   const [detailDiet, setDetailDiet] = useState<Diet | null>(null);
 
   const handleConfirm = () => {

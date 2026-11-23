@@ -11,6 +11,18 @@ export function getAuthRedirectUrl(): string {
 }
 
 /**
+ * Emails a password-reset link. Opening it fires PASSWORD_RECOVERY → ResetPassword screen,
+ * so "Change Password" in Profile reuses the same flow as "Forgot password".
+ * Throws on failure.
+ */
+export async function sendPasswordResetEmail(email: string): Promise<void> {
+  const sb = getSupabase();
+  if (!sb) throw new Error('Supabase is not configured');
+  const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: getAuthRedirectUrl() });
+  if (error) throw error;
+}
+
+/**
  * Handles deep link / cold-start URL from Supabase auth (tokens in query or hash, or PKCE code).
  * Returns false if nothing was handled, 'recovery' for a password-reset link, else 'session'.
  */

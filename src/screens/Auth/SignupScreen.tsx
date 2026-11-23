@@ -247,18 +247,7 @@ export default function SignupScreen({ navigation }: SignupScreenProps) {
               )}
             </TouchableOpacity>
 
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or register with</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Google Button */}
-            <TouchableOpacity style={styles.btnGoogle} activeOpacity={0.85}>
-              <Text style={styles.googleLetter}>G</Text>
-              <Text style={styles.btnGoogleText}>Sign in with Google</Text>
-            </TouchableOpacity>
+            {/* Google button removed: no OAuth provider is set up (see LoginScreen). */}
           </View>
 
           {/* ── Sign In Row ── */}

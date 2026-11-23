@@ -118,9 +118,15 @@ function PickerCol({ items, selectedIdx, onSelect, flex, colHeight, paddingLeft 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function BirthdayScreen({ navigation }: BirthdayScreenProps) {
   const { next, saving } = useSetupStep('Gender');
-  const [selMonth, setSelMonth]   = useState(5);
-  const [selDay, setSelDay]       = useState(4);
-  const [selYear, setSelYear]     = useState(67);
+  // Start from the saved/drafted birthday (YYYY-MM-DD) when there is one.
+  const [init] = useState(() => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(useOnboardingDraft.getState().birthday ?? '');
+    const y = m ? Number(m[1]) - 1940 : -1;
+    return m && y >= 0 && y < 80 ? { month: Number(m[2]) - 1, day: Number(m[3]) - 1, year: y } : { month: 5, day: 4, year: 67 };
+  });
+  const [selMonth, setSelMonth]   = useState(init.month);
+  const [selDay, setSelDay]       = useState(init.day);
+  const [selYear, setSelYear]     = useState(init.year);
   const [colHeight, setColHeight] = useState(0);
 
   const days  = Array.from({ length: getDaysInMonth(selMonth, 1940 + selYear) }, (_, i) => String(i + 1));

@@ -5,12 +5,12 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../../App';
@@ -21,7 +21,9 @@ import {
   updatePreferences,
   type PreferencesResponse,
 } from '../../services/questionnaireService';
-import { ALLERGEN_LABELS, HALL_NAMES, dietLabel, formatBirthday } from './ProfileScreen';
+import { ALLERGEN_LABELS, HALL_NAMES, dietLabel, formatBirthday, confirmPasswordReset } from './ProfileScreen';
+import { useAuth } from '../../context/AuthContext';
+import { useOnboardingDraft } from '../../stores/onboardingDraftStore';
 
 const countLabel = (n?: number) => (n ? `${n} item${n === 1 ? '' : 's'}` : 'None');
 
@@ -107,6 +109,7 @@ const Divider = () => <View style={styles.divider} />;
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function EditProfileScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const { session } = useAuth();
 
   const [name, setName] = useState('');
   const [university, setUniversity] = useState('UW–Madison');
@@ -136,6 +139,15 @@ export default function EditProfileScreen() {
           const prefs = await fetchPreferences();
           if (cancelled || !prefs) return;
           setPrefs(prefs);
+          // SetUp screens opened in edit mode start from the draft → show current answers.
+          useOnboardingDraft.getState().setDraft({
+            birthday: prefs.birthday ?? null,
+            gender: prefs.gender ?? null,
+            dietType: prefs.diet_type ?? null,
+            dislikes: prefs.dislikes ?? [],
+            allergens: prefs.allergens ?? [],
+            favoriteDiningHalls: prefs.favorite_dining_halls ?? [],
+          });
           if (prefs.height != null) setHeight(String(prefs.height));
           if (prefs.weight != null) setWeight(String(prefs.weight));
           if (prefs.goal_weight != null) setGoalWeight(String(prefs.goal_weight));
@@ -274,7 +286,7 @@ export default function EditProfileScreen() {
 
         {/* ── Danger Zone ── */}
         <SectionBlock title="Account">
-          <NavRow label="Change Password" onPress={() => {}} />
+          <NavRow label="Change Password" onPress={() => confirmPasswordReset(session?.user.email)} />
           <Divider />
           <TouchableOpacity style={styles.deleteRow} activeOpacity={0.7}>
             <Text style={styles.deleteText}>Delete Account</Text>

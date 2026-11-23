@@ -9,10 +9,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { getRecommendedCombos, currentMealType, MealPeriod } from '../../services/homescreenService';
 import { Combo } from '../../types/homescreen';
@@ -155,7 +155,7 @@ export default function HomeScreen() {
   useFocusEffect(load);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.container}>
         <DateStrip />

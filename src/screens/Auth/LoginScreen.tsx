@@ -188,24 +188,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
               )}
             </TouchableOpacity>
 
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or continue with</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Social Buttons */}
-            <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.btnSocial} activeOpacity={0.85}>
-                <Text style={styles.socialIcon}>G</Text>
-                <Text style={styles.btnSocialText}>Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.btnSocial} activeOpacity={0.85}>
-                <Text style={styles.socialIcon}>⌥</Text>
-                <Text style={styles.btnSocialText}>GitHub</Text>
-              </TouchableOpacity>
-            </View>
+            {/* Google/GitHub buttons removed: no OAuth provider is set up, they did nothing.
+                Add back with supabase.auth.signInWithOAuth once Supabase has the providers. */}
 
             {/* Guest */}
             <TouchableOpacity
