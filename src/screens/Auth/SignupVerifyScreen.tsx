@@ -63,6 +63,8 @@ export default function SignupVerifyScreen({ navigation, route }: SignupVerifySc
       }
       setResendHint('Confirmation email sent again.');
       setResendCooldown(RESEND_COOLDOWN);
+    } catch {
+      setResendErr('Could not resend. Check your connection and try again.');
     } finally {
       setResendBusy(false);
     }

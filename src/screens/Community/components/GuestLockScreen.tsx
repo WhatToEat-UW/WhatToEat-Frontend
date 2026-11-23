@@ -12,7 +12,10 @@ type RootStackParamList = {
     Home: undefined;
     };
 
-    export const GuestLockScreen = () => {
+    export const GuestLockScreen = ({
+    title = 'Join the conversation',
+    subtitle = 'See what fellow Badgers are eating today, share your dining hall finds, and help each other eat better on campus.',
+    }: { title?: string; subtitle?: string }) => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
@@ -36,10 +39,8 @@ type RootStackParamList = {
 
         {/* Message card */}
         <View style={styles.card}>
-            <Text style={styles.title}>Join the conversation</Text>
-            <Text style={styles.subtitle}>
-            See what fellow Badgers are eating today, share your dining hall finds, and help each other eat better on campus.
-            </Text>
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.subtitle}>{subtitle}</Text>
 
             <TouchableOpacity
             style={styles.btnPrimary}

@@ -191,15 +191,8 @@ export default function ProfileScreen() {
   // Did the user finish the questionnaire? If no prefs row at all, treat as incomplete.
   const needsQuestionnaire = !prefs;
 
-  const handleLogout = useCallback(async () => {
-    try {
-      await signOut();
-    } finally {
-      navigation.dispatch(
-        CommonActions.reset({ index: 0, routes: [{ name: 'Login' }] }),
-      );
-    }
-  }, [navigation, signOut]);
+  // App.tsx shows Login once the session is gone.
+  const handleLogout = useCallback(() => void signOut(), [signOut]);
 
   const handleStartQuestionnaire = useCallback(() => {
     navigation.dispatch(

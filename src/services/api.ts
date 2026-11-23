@@ -43,10 +43,12 @@ export const BASE_URL = normalizeBase(
     'http://127.0.0.1:8000'
 );
 
-/** Dev-only: used when backend has ALLOW_QUERY_USER_ID=true and no JWT is configured. */
-export const DEFAULT_USER_ID =
-  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_DEV_USER_ID) ||
-  '2a63f492-8875-4d3c-9b72-e262c3293219';
+/**
+ * Dev-only: set EXPO_PUBLIC_DEV_USER_ID to call a local backend (ALLOW_QUERY_USER_ID=true)
+ * without signing in. No default — otherwise guests would act as that user.
+ */
+const DEV_USER_ID =
+  typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_DEV_USER_ID?.trim() : undefined;
 
 /**
  * Access token for the API: Supabase session (runtime) first, then optional
@@ -63,9 +65,9 @@ export function getAccessToken(): string | undefined {
 
 /** Append dev user_id query when no Bearer token (local integration servers). */
 export function withAuthQuery(path: string): string {
-  if (getAccessToken()) return path;
+  if (getAccessToken() || !DEV_USER_ID) return path;
   const sep = path.includes('?') ? '&' : '?';
-  return `${path}${sep}user_id=${encodeURIComponent(DEFAULT_USER_ID)}`;
+  return `${path}${sep}user_id=${encodeURIComponent(DEV_USER_ID)}`;
 }
 
 export function authHeaders(json = true): Record<string, string> {

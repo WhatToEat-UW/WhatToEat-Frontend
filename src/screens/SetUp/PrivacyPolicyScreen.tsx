@@ -19,6 +19,7 @@ import { styles } from './styles/PrivacyPolicyScreen.styles';
 import { RootStackParamList } from '../../../App';
 import { getOnboardingDraftSnapshot, useOnboardingDraft } from '../../stores/onboardingDraftStore';
 import { buildQuestionnairePayload, submitQuestionnaire } from '../../services/questionnaireService';
+import { useAuth } from '../../context/AuthContext';
 
 type PrivacyPolicyScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'PrivacyPolicy'>;
@@ -200,6 +201,7 @@ function FullPolicyModal({
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenProps) {
   const resetDraft = useOnboardingDraft((s) => s.resetDraft);
+  const { onboarding, markOnboarded } = useAuth();
   const [modalKey, setModalKey] = useState<PolicyKey | null>(null);
   const [showFullPolicy, setShowFullPolicy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -219,7 +221,11 @@ export default function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenP
     try {
       await submitQuestionnaire(body);
       resetDraft();
-      navigation.navigate('Home');
+      if (onboarding === 'needed') {
+        markOnboarded(); // first-time setup: App.tsx swaps the SetUp screens for Home
+      } else {
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); // retake from Profile
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       Alert.alert('Could not save preferences', msg);

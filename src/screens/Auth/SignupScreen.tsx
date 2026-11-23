@@ -98,8 +98,8 @@ export default function SignupScreen({ navigation }: SignupScreenProps) {
       setEmailErr('');
     }
 
-    if (password.length < 6) {
-      setPwErr('Password must be at least 6 characters');
+    if (password.length < 8) {
+      setPwErr('Password must be at least 8 characters');
       valid = false;
     } else {
       setPwErr('');
@@ -128,9 +128,8 @@ export default function SignupScreen({ navigation }: SignupScreenProps) {
         return;
       }
       setSuccess(true);
-      if (data.session) {
-        setTimeout(() => navigation.replace('Home'), 500);
-      } else {
+      // With a session (email confirmation off), App.tsx moves on to SetUp by itself.
+      if (!data.session) {
         setTimeout(
           () => navigation.navigate('SignupVerify', { email: email.trim() }),
           400
@@ -213,7 +212,7 @@ export default function SignupScreen({ navigation }: SignupScreenProps) {
                 <TextInput
                   ref={passwordRef}
                   style={[styles.fieldInput, !!pwErr && styles.fieldInputError, { paddingRight: 44 }]}
-                  placeholder="Min. 6 characters"
+                  placeholder="Min. 8 characters"
                   placeholderTextColor={COLORS.inkMuted}
                   secureTextEntry={!showPw}
                   returnKeyType="done"

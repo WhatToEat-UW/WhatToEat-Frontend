@@ -68,3 +68,15 @@ export async function updateProfileMe(patch: ProfilePatch): Promise<void> {
     throw new Error(text || `PATCH profile failed (${res.status})`);
   }
 }
+
+/** Save the name typed at signup to the backend profile, unless one is already set. */
+export async function syncSignupName(name: string): Promise<void> {
+  const me = await fetch(withAuthQuery(`${BASE_URL}/auth/me`), { headers: authHeaders(false) });
+  if (!me.ok) return;
+  if ((await me.json()).name) return;
+  await fetch(withAuthQuery(`${BASE_URL}/auth/profile`), {
+    method: 'POST',
+    headers: authHeaders(true),
+    body: JSON.stringify({ name }),
+  });
+}

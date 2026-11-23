@@ -49,7 +49,8 @@ function ReqItem({ met, label }: { met: boolean; label: string }) {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function ResetPasswordScreen({ navigation }: ResetPasswordScreenProps) {
+// Shown only in password-recovery mode (see App.tsx); leaving it signs out → Login.
+export default function ResetPasswordScreen(_props: ResetPasswordScreenProps) {
   const [newPw, setNewPw]       = useState('');
   const [confPw, setConfPw]     = useState('');
   const [showNew, setShowNew]   = useState(false);
@@ -60,7 +61,7 @@ export default function ResetPasswordScreen({ navigation }: ResetPasswordScreenP
   const [success, setSuccess]   = useState(false);
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [resetErr, setResetErr] = useState('');
-  const { supabaseReady } = useAuth();
+  const { supabaseReady, endRecovery } = useAuth();
 
   useEffect(() => {
     const sb = getSupabase();
@@ -119,7 +120,7 @@ export default function ResetPasswordScreen({ navigation }: ResetPasswordScreenP
         return;
       }
       setSuccess(true);
-      setTimeout(() => navigation.navigate('Login'), 1200);
+      setTimeout(() => void endRecovery(), 1200);
     } catch {
       setResetErr('Something went wrong. Try again.');
     } finally {
@@ -140,7 +141,7 @@ export default function ResetPasswordScreen({ navigation }: ResetPasswordScreenP
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* ── Back Button ── */}
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton onPress={() => void endRecovery()} />
 
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -287,7 +288,7 @@ export default function ResetPasswordScreen({ navigation }: ResetPasswordScreenP
       </KeyboardAvoidingView>
 
       {/* ── Return to Login ── */}
-      <ReturnToLogin onPress={() => navigation.navigate('Login')} />
+      <ReturnToLogin onPress={() => void endRecovery()} />
 
     </SafeAreaView>
   );

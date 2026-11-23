@@ -10,7 +10,6 @@ import { COLORS } from './src/constants/COLORS';
 import LoginScreen from './src/screens/Auth/LoginScreen';
 import SignupScreen from './src/screens/Auth/SignupScreen';
 import ForgotPasswordScreen from './src/screens/Auth/ForgotPasswordScreen';
-import VerifyEmailScreen from './src/screens/Auth/VerifyEmailScreen';
 import ResetPasswordScreen from './src/screens/Auth/ResetPasswordScreen';
 import AllergensScreen from './src/screens/SetUp/AllergensScreen';
 import BirthdayScreen from './src/screens/SetUp/BirthdayScreen';
@@ -36,7 +35,6 @@ export type RootStackParamList = {
   Login: undefined;
   ResetPassword: undefined;
   Signup: undefined;
-  VerifyEmail: undefined;
   Allergens: undefined;
   Birthday: undefined;
   Diet: undefined;
@@ -60,10 +58,18 @@ export type RootStackParamList = {
 const Stack = createStackNavigator<RootStackParamList>();
 const queryClient = new QueryClient();
 
+/**
+ * Which screens exist depends on auth state; when it changes, React Navigation switches
+ * to the first screen of the new set on its own (no navigate('Home') calls in screens).
+ *  - reset-password link opened → ResetPassword only
+ *  - signed in, setup not done  → SetUp flow (Welcome first)
+ *  - signed in / guest          → app (+ SetUp for "retake", + auth screens for guests)
+ *  - otherwise                  → Login / Signup
+ */
 function RootNavigator() {
-  const { initializing, session, isGuest } = useAuth();
+  const { initializing, session, isGuest, onboarding, recovering } = useAuth();
 
-  if (initializing) {
+  if (initializing || (session && !recovering && onboarding === 'unknown')) {
     return (
       <View
         style={{
@@ -78,38 +84,60 @@ function RootNavigator() {
     );
   }
 
-  const startAtHome = (!!session && !isGuest) || isGuest;
+  const authScreens = (
+    <>
+      <Stack.Screen name="Login"          component={LoginScreen} />
+      <Stack.Screen name="Signup"         component={SignupScreen} />
+      <Stack.Screen name="SignupVerify"   component={SignupVerifyScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    </>
+  );
+  const setupScreens = (
+    <>
+      <Stack.Screen name="Welcome"        component={WelcomeScreen} />
+      <Stack.Screen name="Birthday"       component={BirthdayScreen} />
+      <Stack.Screen name="Gender"         component={GenderScreen} />
+      <Stack.Screen name="Height"         component={HeightScreen} />
+      <Stack.Screen name="Weight"         component={WeightScreen} />
+      <Stack.Screen name="GoalWeight"     component={GoalWeightScreen} />
+      <Stack.Screen name="Diet"           component={DietScreen} />
+      <Stack.Screen name="Dislikes"       component={DislikesScreen} />
+      <Stack.Screen name="Allergens"      component={AllergensScreen} />
+      <Stack.Screen name="DiningHall"     component={DiningHallScreen} />
+      <Stack.Screen name="PrivacyPolicy"  component={PrivacyPolicyScreen} />
+    </>
+  );
+  const appScreens = (
+    <>
+      <Stack.Screen name="Home"           component={BottomBar} />
+      <Stack.Screen name="Meal"           component={HomeScreenMeal} />
+      <Stack.Screen name="Confirm"        component={HomeScreenConfirm} />
+      <Stack.Screen name="Add"            component={HomeScreenAdd} />
+      <Stack.Screen name="Scan"           component={ScanScreen} />
+      <Stack.Screen name="EditProfile"    component={EditProfileScreen} />
+    </>
+  );
+
+  let screens: React.ReactNode;
+  if (recovering) {
+    screens = <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />;
+  } else if (session && onboarding === 'needed') {
+    screens = setupScreens;
+  } else if (session || isGuest) {
+    screens = (
+      <>
+        {appScreens}
+        {setupScreens}
+        {isGuest && authScreens}
+      </>
+    );
+  } else {
+    screens = authScreens;
+  }
 
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName={startAtHome ? 'Home' : 'Login'}
-        screenOptions={{ headerShown: false }}
-      >
-              <Stack.Screen name="Login"          component={LoginScreen} />
-              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-              <Stack.Screen name="Signup"         component={SignupScreen} />
-              <Stack.Screen name="VerifyEmail"    component={VerifyEmailScreen} />
-              <Stack.Screen name="ResetPassword"  component={ResetPasswordScreen} />
-              <Stack.Screen name="Allergens"      component={AllergensScreen} />
-              <Stack.Screen name="Birthday"       component={BirthdayScreen} />
-              <Stack.Screen name="Diet"           component={DietScreen} />
-              <Stack.Screen name="DiningHall"     component={DiningHallScreen} />
-              <Stack.Screen name="Dislikes"       component={DislikesScreen} />
-              <Stack.Screen name="Gender"         component={GenderScreen} />
-              <Stack.Screen name="GoalWeight"     component={GoalWeightScreen} />
-              <Stack.Screen name="Height"         component={HeightScreen} />
-              <Stack.Screen name="PrivacyPolicy"  component={PrivacyPolicyScreen} />
-              <Stack.Screen name="Weight"         component={WeightScreen} />
-              <Stack.Screen name="Welcome"        component={WelcomeScreen} />
-              <Stack.Screen name="Home"           component={BottomBar} />
-              <Stack.Screen name="Meal"           component={HomeScreenMeal} />
-              <Stack.Screen name="Confirm"        component={HomeScreenConfirm} />
-              <Stack.Screen name="Add"            component={HomeScreenAdd} />
-              <Stack.Screen name="Scan"           component={ScanScreen} />
-              <Stack.Screen name="SignupVerify"   component={SignupVerifyScreen} />
-              <Stack.Screen name="EditProfile"    component={EditProfileScreen} />
-            </Stack.Navigator>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>{screens}</Stack.Navigator>
     </NavigationContainer>
   );
 }

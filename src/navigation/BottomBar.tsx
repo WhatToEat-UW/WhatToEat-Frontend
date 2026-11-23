@@ -8,8 +8,24 @@ import ScanScreen from '../screens/Scan/ScanScreen';
 import CommunityScreen from '../screens/Community/CommunityScreen';
 import MyProfileScreen from '../screens/Profile/ProfileScreen';
 import { colors } from '../constants/theme';
+import { useAuth } from '../context/AuthContext';
+import { GuestLockScreen } from '../screens/Community/components/GuestLockScreen';
 
 const Tab = createBottomTabNavigator();
+
+// Guests can browse Dining (public); these tabs need an account.
+function guestLocked(Screen: React.ComponentType, title: string, subtitle: string) {
+  return function GuestLockedTab() {
+    const { isGuest } = useAuth();
+    return isGuest ? <GuestLockScreen title={title} subtitle={subtitle} /> : <Screen />;
+  };
+}
+const HomeTab = guestLocked(HomeScreen, 'Your picks, your goals',
+  'Sign in to get meal combos matched to your calories, diet and allergens.');
+const ScanTab = guestLocked(ScanScreen, 'Scan your meals',
+  'Sign in to scan a plate and save it to your food log.');
+const ProfileTab = guestLocked(MyProfileScreen, 'Make it yours',
+  'Sign in to set your goals, track streaks and manage your account.');
 
 function HomeIcon({ color }: { color: string }) {
   return (
@@ -97,15 +113,15 @@ export default function BottomBar() {
         },
       }}
     >
-      <Tab.Screen name="Home" component={HomeScreen}
+      <Tab.Screen name="Home" component={HomeTab}
         options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={HomeIcon} label="Home" focused={focused} /> }} />
       <Tab.Screen name="DiningHalls" component={DiningHallsScreen}
         options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={DiningIcon} label="Dining" focused={focused} /> }} />
-      <Tab.Screen name="Scan" component={ScanScreen}
+      <Tab.Screen name="Scan" component={ScanTab}
         options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={ScanIcon} label="Scan" focused={focused} /> }} />
       <Tab.Screen name="Community" component={CommunityScreen}
         options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={CommunityIcon} label="Community" focused={focused} /> }} />
-      <Tab.Screen name="Profile" component={MyProfileScreen}
+      <Tab.Screen name="Profile" component={ProfileTab}
         options={{ tabBarIcon: ({ focused }) => <TabIcon Icon={ProfileIcon} label="Profile" focused={focused} /> }} />
     </Tab.Navigator>
   );

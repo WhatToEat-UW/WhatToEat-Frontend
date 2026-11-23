@@ -133,3 +133,23 @@ export async function updatePreferences(patch: {
     throw new Error(text || `PATCH preferences failed (${res.status})`);
   }
 }
+
+/**
+ * Has the signed-in user finished onboarding? 404 from /users/me/preferences = not yet.
+ * Network/server errors resolve to true so a sleeping backend never traps users in setup.
+ */
+export async function hasCompletedOnboarding(): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const res = await fetch(withAuthQuery(`${BASE_URL}/users/me/preferences`), {
+      headers: authHeaders(false),
+      signal: controller.signal,
+    });
+    return res.status !== 404;
+  } catch {
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
+}

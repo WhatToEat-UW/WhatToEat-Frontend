@@ -91,9 +91,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
         setEmailErr(error.message || 'Invalid email or password');
         return;
       }
+      // App.tsx switches to Home / SetUp once the new session arrives.
       setSuccess(true);
-      setIsGuest(false);
-      setTimeout(() => navigation.replace('Home'), 400);
     } catch {
       setEmailErr('Something went wrong. Try again.');
     } finally {
@@ -211,10 +210,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             {/* Guest */}
             <TouchableOpacity
               style={styles.btnGuest}
-              onPress={() => {
-                setIsGuest(true);
-                navigation.replace('Home');
-              }}
+              onPress={() => setIsGuest(true)}
               activeOpacity={0.7}
             >
               <Text style={styles.btnGuestText}>Continue as guest →</Text>

@@ -12,9 +12,9 @@ export function getAuthRedirectUrl(): string {
 
 /**
  * Handles deep link / cold-start URL from Supabase auth (tokens in query or hash, or PKCE code).
- * Returns true if a session was established or exchange succeeded.
+ * Returns false if nothing was handled, 'recovery' for a password-reset link, else 'session'.
  */
-export async function handleSupabaseAuthUrl(url: string): Promise<boolean> {
+export async function handleSupabaseAuthUrl(url: string): Promise<false | 'session' | 'recovery'> {
   const sb = getSupabase();
   if (!sb || !url) return false;
 
@@ -31,11 +31,13 @@ export async function handleSupabaseAuthUrl(url: string): Promise<boolean> {
     if (params.get('error')) {
       return false;
     }
+    // Password-reset emails carry type=recovery (implicit flow).
+    const ok = params.get('type') === 'recovery' ? 'recovery' : 'session';
 
     const code = params.get('code');
     if (code) {
       const { error } = await sb.auth.exchangeCodeForSession(code);
-      return !error;
+      return error ? false : ok;
     }
 
     const access_token = params.get('access_token');
@@ -43,7 +45,7 @@ export async function handleSupabaseAuthUrl(url: string): Promise<boolean> {
 
     if (access_token && refresh_token) {
       const { error } = await sb.auth.setSession({ access_token, refresh_token });
-      return !error;
+      return error ? false : ok;
     }
 
     return false;
