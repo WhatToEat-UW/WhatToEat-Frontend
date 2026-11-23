@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Post, Reply } from '../types';
@@ -186,7 +187,7 @@ function LocalThreadScreen({
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [replies, setReplies] = useState<Reply[]>(initialReplies);
   const [inputText, setInputText] = useState('');
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   const handleSend = () => {
     if (!inputText.trim()) return;
@@ -285,7 +286,7 @@ function ApiThreadScreen({ post, onClose }: { post: Post; onClose: () => void })
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyingToName, setReplyingToName] = useState<string | null>(null);
   const [selectedReply, setSelectedReply] = useState<Reply | null>(null);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   const reload = useCallback(async () => {
     const next = await fetchCommunityPostDetail(post.id);

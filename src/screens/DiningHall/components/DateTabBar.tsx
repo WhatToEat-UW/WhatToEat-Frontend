@@ -3,6 +3,7 @@ import {
     View, Text, TouchableOpacity, ScrollView,
     NativeSyntheticEvent, NativeScrollEvent, Dimensions,
     } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
     import { styles } from '../styles/DateTabBar.styles';
 
     export interface DateTab {
@@ -23,7 +24,7 @@ import {
     const STRIP_WIDTH = Dimensions.get('window').width - 40;
 
     export const DateTabBar = ({ tabs, selectedDate, onSelect }: Props) => {
-    const scrollRef = useRef<ScrollView>(null);
+    const scrollRef = useRef<ScrollViewInstance>(null);
 
     // To scroll the last tab (index N-1) to x=0:
     // scrollX = (N-1) * PILL_WIDTH

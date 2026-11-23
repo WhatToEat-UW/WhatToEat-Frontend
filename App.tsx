@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { COLORS } from './src/constants/COLORS';
 import LoginScreen from './src/screens/Auth/LoginScreen';
@@ -115,6 +116,7 @@ function RootNavigator() {
 
 export default function App() {
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <AuthProvider>
@@ -122,5 +124,6 @@ export default function App() {
         </AuthProvider>
       </SafeAreaProvider>
     </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }

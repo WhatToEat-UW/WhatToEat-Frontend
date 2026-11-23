@@ -9,7 +9,6 @@ import {
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -47,9 +46,9 @@ export default function HomeScreenMeal() {
   const totalFat = combo?.totalFat ?? 0;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <>
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="dark-content" backgroundColor={COLORS.beige} />
+        <StatusBar barStyle="dark-content" />
         <View style={styles.container}>
 
           {/* ── Total row ── */}
@@ -117,7 +116,7 @@ export default function HomeScreenMeal() {
 
         </View>
       </SafeAreaView>
-    </GestureHandlerRootView>
+    </>
   );
 }
 

@@ -10,6 +10,7 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -47,8 +48,8 @@ export default function SignupScreen({ navigation }: SignupScreenProps) {
   const [loading, setLoading]   = useState(false);
   const [success, setSuccess]   = useState(false);
 
-  const emailRef    = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
+  const emailRef    = useRef<TextInputInstance>(null);
+  const passwordRef = useRef<TextInputInstance>(null);
 
   const { supabaseReady } = useAuth();
 

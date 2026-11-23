@@ -1,5 +1,6 @@
 import { BASE_URL, authHeaders, withAuthQuery } from './api';
 import { toLocalYmd } from '../utils/dateLocal';
+import type { AddonItem, Combo, DailyGoals } from '../types/homescreen';
 
 /** Call at request time — module-level "today" breaks across midnight and used to use UTC. */
 function todayLocal(): string {
@@ -24,14 +25,14 @@ export const getRecommendedCombos = async (mealType?: string) => {
   if (mealType) qs.set('mealType', mealType);
   const url = withAuthQuery(`${BASE_URL}/recommendations/combo?${qs.toString()}`);
   const res = await fetch(url, { headers: authHeaders(false) });
-  return parseJson(res, 'GET /recommendations/combo');
+  return parseJson<{ combos: Combo[] }>(res, 'GET /recommendations/combo');
 };
 
 export const getDailyGoals = async () => {
   const qs = new URLSearchParams({ date: todayLocal() });
   const url = withAuthQuery(`${BASE_URL}/goals/daily?${qs.toString()}`);
   const res = await fetch(url, { headers: authHeaders(false) });
-  return parseJson(res, 'GET /goals/daily');
+  return parseJson<DailyGoals>(res, 'GET /goals/daily');
 };
 
 export const logMeal = async (mealType: string, items: object[]) => {
@@ -41,7 +42,7 @@ export const logMeal = async (mealType: string, items: object[]) => {
     headers: authHeaders(true),
     body: JSON.stringify({ date: todayLocal(), mealType, items }),
   });
-  return parseJson(res, 'POST /meals/log');
+  return parseJson<{ mealLogId: number; message: string }>(res, 'POST /meals/log');
 };
 
 export const getAddons = async (mealType?: string) => {
@@ -49,5 +50,5 @@ export const getAddons = async (mealType?: string) => {
   if (mealType) qs.set('mealType', mealType);
   const url = withAuthQuery(`${BASE_URL}/recommendations/addons?${qs.toString()}`);
   const res = await fetch(url, { headers: authHeaders(false) });
-  return parseJson(res, 'GET /recommendations/addons');
+  return parseJson<{ mealType: string; suggestions: AddonItem[]; quickAddons: AddonItem[] }>(res, 'GET /recommendations/addons');
 };

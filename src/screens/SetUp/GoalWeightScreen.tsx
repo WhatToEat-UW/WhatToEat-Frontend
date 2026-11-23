@@ -7,6 +7,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import ProgressBar from './components/ProgressBar';
@@ -66,7 +67,7 @@ export default function GoalWeightScreen({ navigation }: GoalWeightScreenProps) 
   const [unit, setUnitState] = useState<'kg' | 'lb'>('kg');
   const [kgValue, setKgValue] = useState(77.0);
   const [lbValue, setLbValue] = useState(170);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const [rulerWidth, setRulerWidth] = useState(0);
 
   const currentValue = unit === 'kg' ? kgValue : lbValue;

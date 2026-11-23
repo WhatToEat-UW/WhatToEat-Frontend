@@ -58,7 +58,7 @@ export default function HomeScreenAdd() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFD166" />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.container}>
 
         {/* Header */}

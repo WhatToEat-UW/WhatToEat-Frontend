@@ -7,11 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.WhatToEat-Frontend"
@@ -33,6 +28,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
       [
         "expo-camera",
         {

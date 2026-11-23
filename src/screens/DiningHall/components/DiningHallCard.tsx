@@ -94,12 +94,13 @@ import {
             )}
 
             {/* AI combo recommendation */}
-            {/* TODO: aiPickLabel and aiPickName from GET /api/recommendations?hallId=hall.id&userId=currentUser&date=selectedDate */}
+            {day.aiPickLabel && day.aiPickName && (
             <ComboButton
                 label={day.aiPickLabel}
                 title={day.aiPickName}
                 onPress={() => navigation.navigate('Meal')}
             />
+            )}
 
             {/* Meal tabs */}
             <View style={styles.mealTabs}>

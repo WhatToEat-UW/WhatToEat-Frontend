@@ -7,6 +7,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import ProgressBar from './components/ProgressBar';
@@ -56,7 +57,7 @@ type PickerColProps = {
 };
 
 function PickerCol({ items, selectedIdx, onSelect }: PickerColProps) {
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const [colHeight, setColHeight] = useState(0);
   const PAD = colHeight > 0 ? Math.round((colHeight - ITEM_H) / 2) : ITEM_H * 3;
 

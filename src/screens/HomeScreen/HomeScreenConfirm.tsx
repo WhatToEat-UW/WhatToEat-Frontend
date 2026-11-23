@@ -66,7 +66,7 @@ export default function HomeScreenConfirm() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.beige} />
+      <StatusBar barStyle="dark-content" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}

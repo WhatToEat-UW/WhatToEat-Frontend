@@ -18,11 +18,11 @@ export interface MealMenu {
 }
 
 export interface DiningHallDay {
-  status: string;          // ← changed from StatusType to string
+  status: StatusType;
   hours: string;
   closedNote?: string;
-  aiPickLabel?: string;    // ← made optional
-  aiPickName?: string;     // ← made optional
+  aiPickLabel?: string | null;
+  aiPickName?: string | null;
   menus: Record<string, MealMenu>;  // ← changed from Record<MealType, ...> to Record<string, ...>
 }
 

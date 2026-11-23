@@ -1,4 +1,3 @@
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as Linking from 'expo-linking';
 import { getSupabase } from './supabase';
 
@@ -25,21 +24,22 @@ export async function handleSupabaseAuthUrl(url: string): Promise<boolean> {
   }
 
   try {
-    const { params, errorCode } = QueryParams.getQueryParams(url);
-    if (errorCode) {
+    // Supabase puts tokens in the query (?code=) or the fragment (#access_token=); merge both.
+    const [beforeHash, hash = ''] = url.split('#');
+    const params = new URLSearchParams(beforeHash.split('?')[1] ?? '');
+    new URLSearchParams(hash).forEach((v, k) => params.set(k, v));
+    if (params.get('error')) {
       return false;
     }
 
-    const code = typeof params.code === 'string' ? params.code : undefined;
+    const code = params.get('code');
     if (code) {
       const { error } = await sb.auth.exchangeCodeForSession(code);
       return !error;
     }
 
-    const access_token =
-      typeof params.access_token === 'string' ? params.access_token : undefined;
-    const refresh_token =
-      typeof params.refresh_token === 'string' ? params.refresh_token : undefined;
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
 
     if (access_token && refresh_token) {
       const { error } = await sb.auth.setSession({ access_token, refresh_token });

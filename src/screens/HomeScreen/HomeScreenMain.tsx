@@ -148,7 +148,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.beige} />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.container}>
         <DateStrip />
         <View style={styles.sectionLabel}>

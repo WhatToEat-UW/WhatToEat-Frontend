@@ -10,6 +10,7 @@ import {
   ScrollView,
   Animated,
 } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import BackButton from './components/BackButton';
@@ -50,7 +51,7 @@ export default function VerifyEmailScreen({ navigation, route }: VerifyEmailScre
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
   const [resendLabel, setResendLabel]       = useState('Resend code?');
 
-  const inputRefs = useRef<(TextInput | null)[]>([]);
+  const inputRefs = useRef<(TextInputInstance | null)[]>([]);
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const allFilled = code.every(c => c.length === 1);
 
