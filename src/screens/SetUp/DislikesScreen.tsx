@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import ProgressBar from './components/ProgressBar';
 import ContinueButton from './components/ContinueButton';
+import { useSetupStep } from './useSetupStep';
 import BackButton from './components/BackButton';
 import SkipButton from './components/SkipButton';
 import { styles } from './styles/DislikesScreen.styles';
@@ -41,6 +42,7 @@ const CATEGORIES: Category[] = [
 
 export default function DislikesScreen({ navigation }: DislikesScreenProps) {
   const setDraft = useOnboardingDraft((s) => s.setDraft);
+  const { edit, next, saving } = useSetupStep('Allergens');
   const [selected, setSelected]   = useState<Set<string>>(new Set());
   const [noDislikes, setNoDislikes] = useState(false);
 
@@ -75,12 +77,14 @@ export default function DislikesScreen({ navigation }: DislikesScreenProps) {
 
       <View style={styles.topRow}>
         <BackButton onPress={() => navigation.goBack()} />
+        {!edit && (
         <SkipButton
           onPress={() => {
             setDraft({ dislikes: [] });
             navigation.navigate('Allergens');
           }}
         />
+        )}
       </View>
 
       <ProgressBar progress="70%" step="Step 7 of 10" />
@@ -151,10 +155,9 @@ export default function DislikesScreen({ navigation }: DislikesScreenProps) {
 
       <ContinueButton
         onPress={() => {
-          setDraft({ dislikes: noDislikes ? [] : Array.from(selected) });
-          navigation.navigate('Allergens');
+          void next({ dislikes: noDislikes ? [] : Array.from(selected) });
         }}
-        disabled={!canContinue}
+        disabled={!canContinue || saving}
       />
 
     </SafeAreaView>

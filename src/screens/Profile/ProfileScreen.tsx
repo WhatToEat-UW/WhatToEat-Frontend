@@ -46,7 +46,7 @@ const IconChevron = () => (
   </Svg>
 );
 
-const HALL_NAMES: Record<string, string> = {
+export const HALL_NAMES: Record<string, string> = {
   gordon: 'Gordon Avenue Market',
   fourlakes: 'Four Lakes Market',
   liz: "Liz's Market",
@@ -55,7 +55,7 @@ const HALL_NAMES: Record<string, string> = {
   lowell: 'Lowell Market',
 };
 
-const ALLERGEN_LABELS: Record<string, string> = {
+export const ALLERGEN_LABELS: Record<string, string> = {
   soy: 'Soy',
   peanuts: 'Peanuts',
   treenuts: 'Tree nuts',
@@ -69,7 +69,7 @@ const ALLERGEN_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
-function dietLabel(dt: string | null | undefined): string {
+export function dietLabel(dt: string | null | undefined): string {
   if (!dt) return '—';
   const m: Record<string, string> = {
     balanced: 'Balanced',
@@ -81,7 +81,7 @@ function dietLabel(dt: string | null | undefined): string {
   return m[dt] ?? dt;
 }
 
-function formatBirthday(iso: string | null | undefined): string {
+export function formatBirthday(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso + 'T12:00:00');
   if (Number.isNaN(d.getTime())) return iso;

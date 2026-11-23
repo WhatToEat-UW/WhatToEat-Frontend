@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import ProgressBar from './components/ProgressBar';
 import ContinueButton from './components/ContinueButton';
+import { useSetupStep } from './useSetupStep';
 import BackButton from './components/BackButton';
 import SkipButton from './components/SkipButton';
 import { styles } from './styles/AllergensScreen.styles';
@@ -43,11 +44,16 @@ const ALLERGENS = [
 
 export default function AllergensScreen({ navigation }: AllergensScreenProps) {
   const setDraft = useOnboardingDraft((s) => s.setDraft);
+  const { edit, next, saving } = useSetupStep('DiningHall');
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const toggle = (id: string) => {
     setSelected(prev => {
+      // "Not a picky eater" (none) excludes every allergen, and vice versa —
+      // otherwise the payload collapses to ['none'] and real allergens are dropped.
+      if (id === 'none') return prev.has('none') ? new Set() : new Set(['none']);
       const next = new Set(prev);
+      next.delete('none');
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
@@ -58,12 +64,14 @@ export default function AllergensScreen({ navigation }: AllergensScreenProps) {
 
       <View style={styles.topRow}>
         <BackButton onPress={() => navigation.goBack()} />
+        {!edit && (
         <SkipButton
           onPress={() => {
             setDraft({ allergens: ['none'] });
             navigation.navigate('DiningHall');
           }}
         />
+        )}
       </View>
 
       <ProgressBar progress="80%" step="Step 8 of 10" />
@@ -117,10 +125,9 @@ export default function AllergensScreen({ navigation }: AllergensScreenProps) {
       {/* ── Disabled until at least one allergen is selected ── */}
       <ContinueButton
         onPress={() => {
-          setDraft({ allergens: Array.from(selected) });
-          navigation.navigate('DiningHall');
+          void next({ allergens: Array.from(selected) });
         }}
-        disabled={selected.size === 0}
+        disabled={selected.size === 0 || saving}
       />
 
     </SafeAreaView>

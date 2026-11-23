@@ -39,6 +39,7 @@ type GoalWeightScreenProps = {
 const KG_MIN = 30.0;
 const KG_MAX = 200.0;
 const KG_STEP = 0.1;
+const LB_PER_KG = 2.20462;
 const KG_COUNT = Math.round((KG_MAX - KG_MIN) / KG_STEP) + 1;
 const LB_MIN = 66;
 const LB_MAX = 440;
@@ -64,7 +65,9 @@ function getLabelText(unit: 'kg' | 'lb', idx: number): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function GoalWeightScreen({ navigation }: GoalWeightScreenProps) {
   const setDraft = useOnboardingDraft((s) => s.setDraft);
-  const [unit, setUnitState] = useState<'kg' | 'lb'>('kg');
+  // The API stores goal weight in the same unit as current weight (weight_unit).
+  const weightUnit = useOnboardingDraft((s) => s.weightUnit);
+  const [unit, setUnitState] = useState<'kg' | 'lb'>(weightUnit);
   const [kgValue, setKgValue] = useState(77.0);
   const [lbValue, setLbValue] = useState(170);
   const scrollRef = useRef<ScrollViewInstance>(null);
@@ -83,8 +86,14 @@ export default function GoalWeightScreen({ navigation }: GoalWeightScreenProps) 
   }, [unit]);
 
   const handleUnitChange = (u: 'kg' | 'lb') => {
+    if (u === unit) return;
+    // Carry the chosen weight across units instead of jumping to the other unit's default.
+    const val = u === 'kg'
+      ? Math.min(KG_MAX, Math.max(KG_MIN, Math.round((lbValue / LB_PER_KG) * 10) / 10))
+      : Math.min(LB_MAX, Math.max(LB_MIN, Math.round(kgValue * LB_PER_KG)));
+    if (u === 'kg') setKgValue(val);
+    else setLbValue(val);
     setUnitState(u);
-    const val = u === 'kg' ? kgValue : lbValue;
     setTimeout(() => {
       scrollRef.current?.scrollTo({ x: getIndexFromValue(u, val) * TICK_W, animated: false });
     }, 50);
@@ -182,7 +191,11 @@ export default function GoalWeightScreen({ navigation }: GoalWeightScreenProps) 
       {/* ── Continue Button ── */}
       <ContinueButton
         onPress={() => {
-          setDraft({ goalWeight: currentValue });
+          const goal =
+            unit === weightUnit ? currentValue
+            : weightUnit === 'kg' ? Math.round((currentValue / LB_PER_KG) * 10) / 10
+            : Math.round(currentValue * LB_PER_KG);
+          setDraft({ goalWeight: goal });
           navigation.navigate('Diet');
         }}
       />

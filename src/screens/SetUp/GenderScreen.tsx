@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import ProgressBar from './components/ProgressBar';
 import ContinueButton from './components/ContinueButton';
+import { useSetupStep } from './useSetupStep';
 import BackButton from './components/BackButton';
 import { styles } from './styles/GenderScreen.styles';
 import { useOnboardingDraft } from '../../stores/onboardingDraftStore';
@@ -37,7 +38,7 @@ const GENDERS = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function GenderScreen({ navigation }: GenderScreenProps) {
-  const setDraft = useOnboardingDraft((s) => s.setDraft);
+  const { next, saving } = useSetupStep('Height');
   const [selected, setSelected] = useState<string | null>(null);
 
   return (
@@ -85,10 +86,9 @@ export default function GenderScreen({ navigation }: GenderScreenProps) {
       {/* ── Continue Button ── */}
       <ContinueButton
         onPress={() => {
-          if (selected) setDraft({ gender: selected });
-          navigation.navigate('Height');
+          if (selected) void next({ gender: selected });
         }}
-        disabled={!selected}
+        disabled={!selected || saving}
       />
 
     </SafeAreaView>

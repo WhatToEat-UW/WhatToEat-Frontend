@@ -66,7 +66,7 @@ export function buildQuestionnairePayload(d: OnboardingDraft): QuestionnaireSubm
 const SUBMIT_TIMEOUT_MS = 60_000;
 
 /**
- * POST /questionnaire. Resolves on success or 409 (already saved — treat as OK for onboarding).
+ * POST /questionnaire. On 409 (already saved) the same answers are sent as PATCH /users/me/preferences.
  */
 export async function submitQuestionnaire(body: QuestionnaireSubmitBody): Promise<void> {
   const url = withAuthQuery(`${BASE_URL}/questionnaire`);
@@ -80,6 +80,8 @@ export async function submitQuestionnaire(body: QuestionnaireSubmitBody): Promis
       signal: controller.signal,
     });
     if (res.status === 409) {
+      // Already submitted once (retake from Profile): save the new answers as an update.
+      await updatePreferences(body);
       return;
     }
     if (!res.ok) {

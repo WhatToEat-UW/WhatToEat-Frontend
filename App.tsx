@@ -35,12 +35,12 @@ export type RootStackParamList = {
   Login: undefined;
   ResetPassword: undefined;
   Signup: undefined;
-  Allergens: undefined;
-  Birthday: undefined;
-  Diet: undefined;
-  DiningHall: undefined;
-  Dislikes: undefined;
-  Gender: undefined;
+  Allergens: { edit?: boolean } | undefined;
+  Birthday: { edit?: boolean } | undefined;
+  Diet: { edit?: boolean } | undefined;
+  DiningHall: { edit?: boolean } | undefined;
+  Dislikes: { edit?: boolean } | undefined;
+  Gender: { edit?: boolean } | undefined;
   GoalWeight: undefined;
   Height: undefined;
   PrivacyPolicy: undefined;

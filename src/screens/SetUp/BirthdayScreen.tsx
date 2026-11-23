@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import ProgressBar from './components/ProgressBar';
 import ContinueButton from './components/ContinueButton';
+import { useSetupStep } from './useSetupStep';
 import BackButton from './components/BackButton';
 import { styles, ITEM_H } from './styles/BirthdayScreen.styles';
 import { useOnboardingDraft } from '../../stores/onboardingDraftStore';
@@ -116,7 +117,7 @@ function PickerCol({ items, selectedIdx, onSelect, flex, colHeight, paddingLeft 
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function BirthdayScreen({ navigation }: BirthdayScreenProps) {
-  const setDraft = useOnboardingDraft((s) => s.setDraft);
+  const { next, saving } = useSetupStep('Gender');
   const [selMonth, setSelMonth]   = useState(5);
   const [selDay, setSelDay]       = useState(4);
   const [selYear, setSelYear]     = useState(67);
@@ -196,9 +197,9 @@ export default function BirthdayScreen({ navigation }: BirthdayScreenProps) {
           const m = selMonth + 1;
           const day = selDay + 1;
           const birthday = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          setDraft({ birthday });
-          navigation.navigate('Gender');
+          void next({ birthday });
         }}
+        disabled={saving}
       />
 
     </SafeAreaView>

@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import ProgressBar from './components/ProgressBar';
 import ContinueButton from './components/ContinueButton';
+import { useSetupStep } from './useSetupStep';
 import BackButton from './components/BackButton';
 import { styles } from './styles/DiningHallScreen.styles';
 import { useOnboardingDraft } from '../../stores/onboardingDraftStore';
@@ -37,7 +38,7 @@ const HALLS = [
 ];
 
 export default function DiningHallScreen({ navigation }: DiningHallScreenProps) {
-  const setDraft = useOnboardingDraft((s) => s.setDraft);
+  const { next, saving } = useSetupStep('PrivacyPolicy');
   const [order, setOrder] = useState<string[]>([]);
 
   const toggle = (id: string) => {
@@ -113,9 +114,9 @@ export default function DiningHallScreen({ navigation }: DiningHallScreenProps) 
 
       <ContinueButton
         onPress={() => {
-          setDraft({ favoriteDiningHalls: order });
-          navigation.navigate('PrivacyPolicy');
+          void next({ favoriteDiningHalls: order });
         }}
+        disabled={saving}
       />
 
     </SafeAreaView>

@@ -37,6 +37,7 @@ type WeightScreenProps = {
 const KG_MIN = 30.0;
 const KG_MAX = 200.0;
 const KG_STEP = 0.1;
+const LB_PER_KG = 2.20462;
 const KG_COUNT = Math.round((KG_MAX - KG_MIN) / KG_STEP) + 1;
 const LB_MIN = 66;
 const LB_MAX = 440;
@@ -86,8 +87,14 @@ export default function WeightScreen({ navigation }: WeightScreenProps) {
   }, [unit]);
 
   const handleUnitChange = (u: 'kg' | 'lb') => {
+    if (u === unit) return;
+    // Carry the chosen weight across units instead of jumping to the other unit's default.
+    const val = u === 'kg'
+      ? Math.min(KG_MAX, Math.max(KG_MIN, Math.round((lbValue / LB_PER_KG) * 10) / 10))
+      : Math.min(LB_MAX, Math.max(LB_MIN, Math.round(kgValue * LB_PER_KG)));
+    if (u === 'kg') setKgValue(val);
+    else setLbValue(val);
     setUnitState(u);
-    const val = u === 'kg' ? kgValue : lbValue;
     setTimeout(() => {
       const idx = getIndexFromValue(u, val);
       scrollRef.current?.scrollTo({ x: idx * TICK_W, animated: false });

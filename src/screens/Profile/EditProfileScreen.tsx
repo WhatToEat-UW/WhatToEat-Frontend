@@ -16,7 +16,14 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../../App';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { fetchProfileMe, updateProfileMe } from '../../services/profileService';
-import { fetchPreferences } from '../../services/questionnaireService';
+import {
+  fetchPreferences,
+  updatePreferences,
+  type PreferencesResponse,
+} from '../../services/questionnaireService';
+import { ALLERGEN_LABELS, HALL_NAMES, dietLabel, formatBirthday } from './ProfileScreen';
+
+const countLabel = (n?: number) => (n ? `${n} item${n === 1 ? '' : 's'}` : 'None');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COLORS = {
@@ -106,6 +113,7 @@ export default function EditProfileScreen() {
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
   const [goalWeight, setGoalWeight] = useState('');
+  const [prefs, setPrefs] = useState<PreferencesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -127,6 +135,7 @@ export default function EditProfileScreen() {
         try {
           const prefs = await fetchPreferences();
           if (cancelled || !prefs) return;
+          setPrefs(prefs);
           if (prefs.height != null) setHeight(String(prefs.height));
           if (prefs.weight != null) setWeight(String(prefs.weight));
           if (prefs.goal_weight != null) setGoalWeight(String(prefs.goal_weight));
@@ -144,15 +153,20 @@ export default function EditProfileScreen() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const h = parseFloat(height);
-      const w = parseFloat(weight);
-      const gw = parseFloat(goalWeight);
-      await updateProfileMe({
-        name: name.trim() || undefined,
-        height: Number.isFinite(h) ? h : undefined,
-        weight: Number.isFinite(w) ? w : undefined,
-        goalWeight: Number.isFinite(gw) ? gw : undefined,
-      });
+      const num = (s: string) => (Number.isFinite(parseFloat(s)) ? parseFloat(s) : undefined);
+      await updateProfileMe({ name: name.trim() || undefined });
+      // Body info goes through preferences: that endpoint converts units and
+      // recalculates calorie/macro targets (PATCH /users/me does neither).
+      // No preferences yet (setup not done) → nothing to update.
+      if (prefs) {
+        await updatePreferences({
+          height: num(height),
+          height_unit: 'cm',
+          weight: num(weight),
+          goal_weight: num(goalWeight),
+          weight_unit: 'kg',
+        });
+      }
       navigation.goBack();
     } catch (e: unknown) {
       Alert.alert('Save failed', e instanceof Error ? e.message : String(e));
@@ -225,23 +239,37 @@ export default function EditProfileScreen() {
           <Divider />
           <InputRow label="Goal Weight" value={goalWeight} onChangeText={setGoalWeight} keyboardType="numeric" unit="kg" />
           <Divider />
-          <NavRow label="Birthday" value="Sep 15, 2001" onPress={() => navigation.navigate('Birthday')} />
+          <NavRow label="Birthday" value={formatBirthday(prefs?.birthday)} onPress={() => navigation.navigate('Birthday', { edit: true })} />
           <Divider />
-          <NavRow label="Gender" value="Male" onPress={() => navigation.navigate('Gender')} />
+          <NavRow
+            label="Gender"
+            value={prefs?.gender ? prefs.gender.charAt(0).toUpperCase() + prefs.gender.slice(1) : '—'}
+            onPress={() => navigation.navigate('Gender', { edit: true })}
+          />
         </SectionBlock>
 
         {/* ── Diet & Restrictions ── */}
         <SectionBlock title="Diet & Restrictions">
-          <NavRow label="Diet Type" value="High Protein" onPress={() => navigation.navigate('Diet')} />
+          <NavRow label="Diet Type" value={dietLabel(prefs?.diet_type)} onPress={() => navigation.navigate('Diet', { edit: true })} />
           <Divider />
-          <NavRow label="Allergens" value="2 items" onPress={() => navigation.navigate('Allergens')} />
+          <NavRow
+            label="Allergens"
+            value={
+              prefs?.allergens?.filter((a) => a !== 'none').map((a) => ALLERGEN_LABELS[a] ?? a).join(', ') || 'None'
+            }
+            onPress={() => navigation.navigate('Allergens', { edit: true })}
+          />
           <Divider />
-          <NavRow label="Dislikes" value="3 items" onPress={() => navigation.navigate('Dislikes')} />
+          <NavRow label="Dislikes" value={countLabel(prefs?.dislikes?.length)} onPress={() => navigation.navigate('Dislikes', { edit: true })} />
         </SectionBlock>
 
         {/* ── Dining ── */}
         <SectionBlock title="Dining">
-          <NavRow label="Home Dining Hall" value="Gordon Dining" onPress={() => navigation.navigate('DiningHall')} />
+          <NavRow
+            label="Home Dining Hall"
+            value={prefs?.favorite_dining_halls?.[0] ? HALL_NAMES[prefs.favorite_dining_halls[0]] ?? prefs.favorite_dining_halls[0] : '—'}
+            onPress={() => navigation.navigate('DiningHall', { edit: true })}
+          />
         </SectionBlock>
 
         {/* ── Danger Zone ── */}

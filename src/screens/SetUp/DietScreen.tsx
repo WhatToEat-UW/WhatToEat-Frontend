@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import ProgressBar from './components/ProgressBar';
 import ContinueButton from './components/ContinueButton';
+import { useSetupStep } from './useSetupStep';
 import BackButton from './components/BackButton';
 import SkipButton from './components/SkipButton';
 import { COLORS } from '../../constants/COLORS';
@@ -157,6 +158,7 @@ function DietDetailModal({
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function DietScreen({ navigation }: DietScreenProps) {
   const setDraft = useOnboardingDraft((s) => s.setDraft);
+  const { edit, next, saving } = useSetupStep('Dislikes');
   const [selected, setSelected]     = useState<string | null>(null);
   const [detailDiet, setDetailDiet] = useState<Diet | null>(null);
 
@@ -175,12 +177,14 @@ export default function DietScreen({ navigation }: DietScreenProps) {
       {/* ── Top Row: Back + Skip ── */}
       <View style={styles.topRow}>
         <BackButton onPress={() => navigation.goBack()} />
+        {!edit && (
         <SkipButton
           onPress={() => {
             setDraft({ dietType: 'balanced' });
             navigation.navigate('Dislikes');
           }}
         />
+        )}
       </View>
 
       {/* ── Progress ── */}
@@ -230,10 +234,9 @@ export default function DietScreen({ navigation }: DietScreenProps) {
       {/* ── Continue — disabled until diet selected ── */}
       <ContinueButton
         onPress={() => {
-          if (selected) setDraft({ dietType: selected });
-          navigation.navigate('Dislikes');
+          if (selected) void next({ dietType: selected });
         }}
-        disabled={!selected}
+        disabled={!selected || saving}
       />
 
       {/* ── Detail Modal ── */}
