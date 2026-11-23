@@ -10,6 +10,7 @@ export type DiningHallTag =
 
     export interface Reply {
     id: string;
+    authorId: string;
     author: string;
     avatar: string;
     content: string;
@@ -21,9 +22,10 @@ export type DiningHallTag =
 
     export interface Post {
     id: string;
+    authorId: string;
     author: string;
     avatar: string;
-    hallTag: DiningHallTag;
+    hallTag: DiningHallTag | null;
     content: string;
     likes: number;
     comments: number;

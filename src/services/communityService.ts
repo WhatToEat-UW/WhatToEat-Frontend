@@ -24,14 +24,15 @@ export function displayHallToApi(tag: DiningHallTag): string {
   return HALL_DISPLAY_TO_API[tag];
 }
 
-export function apiHallToDisplay(api: string | null | undefined): DiningHallTag {
-  if (!api) return 'Gordon';
+/** null = no / unknown tag (used to show every untagged post as "Gordon"). */
+export function apiHallToDisplay(api: string | null | undefined): DiningHallTag | null {
+  if (!api) return null;
   const key = api.toLowerCase().replace(/\s+/g, '');
   const mapped =
     HALL_API_TO_DISPLAY[api] ||
     HALL_API_TO_DISPLAY[key] ||
     HALL_API_TO_DISPLAY[api.split('-')[0] || ''];
-  return mapped ?? 'Gordon';
+  return mapped ?? null;
 }
 
 type ApiAuthor = { id: string; name: string };
@@ -74,6 +75,7 @@ function formatRelativeTime(iso: string): string {
 function mapReply(r: ApiReply): Reply {
   return {
     id: r.id,
+    authorId: r.author.id,
     author: r.author.name,
     avatar: '🧑',
     content: r.content,
@@ -88,6 +90,7 @@ function mapReply(r: ApiReply): Reply {
 export function mapApiPostToPost(p: ApiPost, replies: Reply[] = []): Post {
   return {
     id: p.id,
+    authorId: p.author.id,
     author: p.author.name,
     avatar: '🧑‍🍳',
     hallTag: apiHallToDisplay(p.hallTag),
@@ -160,21 +163,17 @@ export async function fetchCommunityPostDetail(postId: string): Promise<Post> {
   const data = await res.json();
   const p: ApiPost = data.post;
   const roots: ApiReply[] = data.replies ?? [];
-  const replies = roots.map(mapReplyDeep);
-  return mapApiPostToPost(p, replies);
+  return mapApiPostToPost(p, roots.map(mapReply));
 }
 
-function mapReplyDeep(r: ApiReply): Reply {
-  return {
-    id: r.id,
-    author: r.author.name,
-    avatar: '🧑',
-    content: r.content,
-    likes: r.likeCount,
-    likedByMe: r.likedByMe,
-    createdAt: formatRelativeTime(r.createdAt),
-    replies: (r.replies ?? []).map(mapReplyDeep),
-  };
+/** Backend allows only the author (403 otherwise). */
+export async function deleteCommunityPost(postId: string): Promise<void> {
+  const url = withAuthQuery(`${BASE_URL}/community/posts/${postId}`);
+  const res = await fetch(url, { method: 'DELETE', headers: authHeaders(false) });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `Delete failed (${res.status})`);
+  }
 }
 
 export async function likeCommunityPost(postId: string): Promise<{ liked: boolean; likeCount: number }> {

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
-  Modal,
   Keyboard,
   KeyboardEvent,
   Alert,
@@ -18,9 +17,11 @@ import Svg, { Path } from 'react-native-svg';
 import { Post, Reply } from '../types';
 import { TAG_COLORS } from '../styles/TagColors';
 import { styles } from '../styles/PostDetailScreen.styles';
+import { useAuth } from '../../../context/AuthContext';
 import {
   createPostReply,
   createReplyReply,
+  deleteCommunityPost,
   fetchCommunityPostDetail,
   likeCommunityPost,
   likeReply,
@@ -159,123 +160,9 @@ const ReplyTree = ({
   );
 };
 
-/** Local-only thread (nested modal) — no API */
-function LocalThreadScreen({
-  title,
-  headerEmoji,
-  headerName,
-  headerTime,
-  content,
-  initialLikes,
-  initialLiked,
-  initialReplies,
-  onClose,
-}: {
-  title: string;
-  headerEmoji: string;
-  headerName: string;
-  headerTime: string;
-  content: string;
-  initialLikes: number;
-  initialLiked: boolean;
-  initialReplies: Reply[];
-  onClose: () => void;
-}) {
+function ApiThreadScreen({ post, onClose, onDeleted }: Props) {
   const insets = useSafeAreaInsets();
-  const keyboardOffset = useKeyboardOffset();
-  const [liked, setLiked] = useState(initialLiked);
-  const [likeCount, setLikeCount] = useState(initialLikes);
-  const [replies, setReplies] = useState<Reply[]>(initialReplies);
-  const [inputText, setInputText] = useState('');
-  const inputRef = useRef<TextInputInstance>(null);
-
-  const handleSend = () => {
-    if (!inputText.trim()) return;
-    const newReply: Reply = {
-      id: Date.now().toString(),
-      author: 'You',
-      avatar: '😊',
-      content: inputText.trim(),
-      likes: 0,
-      likedByMe: false,
-      createdAt: 'just now',
-      replies: [],
-    };
-    setReplies((prev) => [...prev, newReply]);
-    setInputText('');
-  };
-
-  return (
-    <View style={[styles.screen, { paddingTop: insets.top, paddingBottom: keyboardOffset }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={onClose} activeOpacity={0.7}>
-          <BackIcon />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{title}</Text>
-      </View>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.postSection}>
-          <View style={styles.postHeader}>
-            <View style={styles.avatarWrap}>
-              <Text style={styles.avatar}>{headerEmoji}</Text>
-            </View>
-            <View style={styles.postAuthorInfo}>
-              <Text style={styles.authorName}>{headerName}</Text>
-              <Text style={styles.createdAt}>{headerTime}</Text>
-            </View>
-          </View>
-          <Text style={styles.postContent}>{content}</Text>
-          <View style={styles.statsRow}>
-            <Text style={styles.statText}>{likeCount} likes</Text>
-            <Text style={styles.statDot}>·</Text>
-            <Text style={styles.statText}>{replies.length} replies</Text>
-          </View>
-          <View style={styles.postActions}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => {
-                setLiked((l) => !l);
-                setLikeCount((c) => (liked ? c - 1 : c + 1));
-              }}
-              activeOpacity={0.7}
-            >
-              <HeartIcon filled={liked} />
-              <Text style={[styles.actionText, liked && styles.actionTextLiked]}>Like</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom > 0 && keyboardOffset === 0 ? insets.bottom : 12 }]}>
-        <View style={styles.mainInputWrap}>
-          <View style={styles.mainInputAvatar}>
-            <Text style={styles.replyAvatar}>😊</Text>
-          </View>
-          <TextInput
-            ref={inputRef}
-            style={styles.mainInput}
-            placeholder="Add a reply..."
-            placeholderTextColor="#9A7070"
-            value={inputText}
-            onChangeText={setInputText}
-            returnKeyType="send"
-            onSubmitEditing={handleSend}
-            multiline
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, inputText.trim().length > 0 && styles.sendBtnActive]}
-            onPress={handleSend}
-            activeOpacity={0.8}
-          >
-            <SendIcon active={inputText.trim().length > 0} />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function ApiThreadScreen({ post, onClose }: { post: Post; onClose: () => void }) {
-  const insets = useSafeAreaInsets();
+  const { session } = useAuth();
   const keyboardOffset = useKeyboardOffset();
   const [live, setLive] = useState<Post>(post);
   const [loading, setLoading] = useState(true);
@@ -285,8 +172,31 @@ function ApiThreadScreen({ post, onClose }: { post: Post; onClose: () => void })
   const [inputText, setInputText] = useState('');
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyingToName, setReplyingToName] = useState<string | null>(null);
-  const [selectedReply, setSelectedReply] = useState<Reply | null>(null);
   const inputRef = useRef<TextInputInstance>(null);
+  const isMine = !!session?.user.id && session.user.id === live.authorId;
+
+  // Hand the latest counts back so the feed card doesn't keep showing stale numbers.
+  const close = () => onClose({ ...live, likes: likeCount, likedByMe: liked });
+
+  const confirmDelete = () => {
+    Alert.alert('Delete post?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setRefreshing(true);
+            await deleteCommunityPost(post.id);
+            onDeleted(post.id);
+          } catch (e: unknown) {
+            setRefreshing(false);
+            Alert.alert('Could not delete post', e instanceof Error ? e.message : String(e));
+          }
+        },
+      },
+    ]);
+  };
 
   const reload = useCallback(async () => {
     const next = await fetchCommunityPostDetail(post.id);
@@ -345,6 +255,7 @@ function ApiThreadScreen({ post, onClose }: { post: Post; onClose: () => void })
   };
 
   const togglePostLike = async () => {
+    if (refreshing) return; // a double tap would send like + like
     try {
       setRefreshing(true);
       if (liked) {
@@ -366,7 +277,7 @@ function ApiThreadScreen({ post, onClose }: { post: Post; onClose: () => void })
 
   const handleSend = async () => {
     const text = inputText.trim();
-    if (!text) return;
+    if (!text || refreshing) return;
     try {
       setRefreshing(true);
       if (replyingToId) {
@@ -393,7 +304,7 @@ function ApiThreadScreen({ post, onClose }: { post: Post; onClose: () => void })
       <View style={[styles.screen, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#FF3347" />
         <Text style={{ marginTop: 12, color: '#9A7070' }}>Loading post…</Text>
-        <TouchableOpacity style={{ marginTop: 24 }} onPress={onClose}>
+        <TouchableOpacity style={{ marginTop: 24 }} onPress={close}>
           <Text style={{ color: '#FF3347', fontWeight: '700' }}>Close</Text>
         </TouchableOpacity>
       </View>
@@ -404,11 +315,16 @@ function ApiThreadScreen({ post, onClose }: { post: Post; onClose: () => void })
     <>
       <View style={[styles.screen, { paddingTop: insets.top, paddingBottom: keyboardOffset }]}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={onClose} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.backBtn} onPress={close} activeOpacity={0.7}>
             <BackIcon />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Post</Text>
           {refreshing ? <ActivityIndicator size="small" color="#9A7070" style={{ marginLeft: 8 }} /> : null}
+          {isMine && (
+            <TouchableOpacity onPress={confirmDelete} disabled={refreshing} style={{ marginLeft: 'auto', padding: 6 }}>
+              <Text style={{ color: '#B91C1C', fontWeight: '800', fontSize: 13 }}>Delete</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <ScrollView
@@ -456,7 +372,7 @@ function ApiThreadScreen({ post, onClose }: { post: Post; onClose: () => void })
                 reply={reply}
                 isLast={i === replies.length - 1}
                 onReply={focusReply}
-                onTap={setSelectedReply}
+                onTap={(r) => focusReply(r.id, r.author)}
               />
             ))}
           </View>
@@ -505,28 +421,15 @@ function ApiThreadScreen({ post, onClose }: { post: Post; onClose: () => void })
         </View>
       </View>
 
-      {selectedReply && (
-        <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelectedReply(null)}>
-          <LocalThreadScreen
-            title="Reply"
-            headerEmoji={selectedReply.avatar}
-            headerName={selectedReply.author}
-            headerTime={selectedReply.createdAt}
-            content={selectedReply.content}
-            initialLikes={selectedReply.likes}
-            initialLiked={selectedReply.likedByMe}
-            initialReplies={selectedReply.replies ?? []}
-            onClose={() => setSelectedReply(null)}
-          />
-        </Modal>
-      )}
     </>
   );
 }
 
 interface Props {
   post: Post;
-  onClose: () => void;
+  /** receives the post with up-to-date likes / reply count */
+  onClose: (updated: Post) => void;
+  onDeleted: (postId: string) => void;
 }
 
-export const PostDetailScreen = ({ post, onClose }: Props) => <ApiThreadScreen post={post} onClose={onClose} />;
+export const PostDetailScreen = ApiThreadScreen;

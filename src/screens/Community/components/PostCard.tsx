@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, Modal, Alert } from 'react-native';
+import {
+  likeCommunityPost,
+  unlikeCommunityPost,
+  likeReply,
+  unlikeReply,
+} from '../../../services/communityService';
 import Svg, { Path } from 'react-native-svg';
 import { Post, Reply } from '../types';
 import { styles } from '../styles/PostCard.styles';
@@ -28,10 +34,39 @@ const CommentIcon = () => (
   </Svg>
 );
 
+type LikeApi = (id: string) => Promise<{ liked: boolean; likeCount: number }>;
+
+/** Like state saved on the server (used to flip only locally and reset on refresh). */
+function useServerLike(id: string, initialLiked: boolean, initialCount: number, like: LikeApi, unlike: LikeApi) {
+  const [liked, setLiked] = useState(initialLiked);
+  const [count, setCount] = useState(initialCount);
+  const busy = useRef(false);
+  useEffect(() => { setLiked(initialLiked); setCount(initialCount); }, [initialLiked, initialCount]);
+
+  const toggle = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    const was = liked;
+    setLiked(!was); // optimistic
+    setCount(c => c + (was ? -1 : 1));
+    try {
+      const r = await (was ? unlike : like)(id);
+      setLiked(r.liked);
+      setCount(r.likeCount);
+    } catch (e: unknown) {
+      setLiked(was);
+      setCount(c => c + (was ? 1 : -1));
+      Alert.alert('Could not update like', e instanceof Error ? e.message : String(e));
+    } finally {
+      busy.current = false;
+    }
+  };
+  return { liked, count, toggle };
+}
+
 // One level of reply shown on main feed
 const ReplyPreviewRow = ({ reply, isLast }: { reply: Reply; isLast: boolean }) => {
-  const [liked, setLiked] = useState(reply.likedByMe);
-  const [count, setCount] = useState(reply.likes);
+  const { liked, count, toggle } = useServerLike(reply.id, reply.likedByMe, reply.likes, likeReply, unlikeReply);
   return (
     <View style={styles.replyWrap}>
       <View style={styles.threadLineCol}>
@@ -49,7 +84,7 @@ const ReplyPreviewRow = ({ reply, isLast }: { reply: Reply; isLast: boolean }) =
         <Text style={styles.replyText}>{reply.content}</Text>
         <TouchableOpacity
           style={styles.replyLike}
-          onPress={() => { setLiked(l => !l); setCount(c => liked ? c - 1 : c + 1); }}
+          onPress={toggle}
           activeOpacity={0.7}
         >
           <HeartIcon filled={liked} />
@@ -62,13 +97,16 @@ const ReplyPreviewRow = ({ reply, isLast }: { reply: Reply; isLast: boolean }) =
 
 interface Props {
   post: Post;
+  onChange: (post: Post) => void;
+  onDeleted: (postId: string) => void;
 }
 
-export const PostCard = ({ post }: Props) => {
-  const [liked, setLiked] = useState(post.likedByMe);
-  const [likeCount, setLikeCount] = useState(post.likes);
+export const PostCard = ({ post, onChange, onDeleted }: Props) => {
+  const { liked, count: likeCount, toggle } = useServerLike(
+    post.id, post.likedByMe, post.likes, likeCommunityPost, unlikeCommunityPost,
+  );
   const [showDetail, setShowDetail] = useState(false);
-  const tagColor = TAG_COLORS[post.hallTag] ?? { bg: '#F0E0E0', text: '#6A4A4A' };
+  const tagColor = post.hallTag ? TAG_COLORS[post.hallTag] : null;
   const previewReplies = (post.replies ?? []).slice(0, 2); // show max 2 on feed
   const hasReplies = previewReplies.length > 0;
 
@@ -92,9 +130,11 @@ export const PostCard = ({ post }: Props) => {
             <View style={styles.postHeader}>
               <Text style={styles.authorName}>{post.author}</Text>
               <Text style={styles.createdAt}>{post.createdAt}</Text>
-              <View style={[styles.hallTag, { backgroundColor: tagColor.bg }]}>
-                <Text style={[styles.hallTagText, { color: tagColor.text }]}>{post.hallTag}</Text>
-              </View>
+              {tagColor && (
+                <View style={[styles.hallTag, { backgroundColor: tagColor.bg }]}>
+                  <Text style={[styles.hallTagText, { color: tagColor.text }]}>{post.hallTag}</Text>
+                </View>
+              )}
             </View>
 
             <Text style={styles.content}>{post.content}</Text>
@@ -104,8 +144,7 @@ export const PostCard = ({ post }: Props) => {
                 style={styles.actionBtn}
                 onPress={e => {
                   e.stopPropagation?.();
-                  setLiked(l => !l);
-                  setLikeCount(c => liked ? c - 1 : c + 1);
+                  void toggle();
                 }}
                 activeOpacity={0.7}
               >
@@ -115,7 +154,8 @@ export const PostCard = ({ post }: Props) => {
 
               <View style={styles.actionBtn}>
                 <CommentIcon />
-                <Text style={styles.actionText}>{post.replies?.length ?? 0} ▾</Text>
+                {/* feed items come without reply trees, so replies.length was always 0 */}
+                <Text style={styles.actionText}>{post.comments}</Text>
               </View>
             </View>
           </View>
@@ -147,7 +187,11 @@ export const PostCard = ({ post }: Props) => {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowDetail(false)}
       >
-        <PostDetailScreen post={post} onClose={() => setShowDetail(false)} />
+        <PostDetailScreen
+          post={{ ...post, likes: likeCount, likedByMe: liked }}
+          onClose={(updated) => { setShowDetail(false); onChange(updated); }}
+          onDeleted={(id) => { setShowDetail(false); onDeleted(id); }}
+        />
       </Modal>
     </>
   );
